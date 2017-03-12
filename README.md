@@ -3,7 +3,7 @@
 ## Shell commands for Philips Hue
 Copyright © 2017 Erik Baauw. All rights reserved.
 
-This shell script provides commands for interacting manually with the [Philips Hue](http://www2.meethue.com/) bridge using the [Philips Hue API](https://developers.meethue.com/philips-hue-api).
+This shell script provides commands for interacting with the [Philips Hue](http://www2.meethue.com/) bridge using the [Philips Hue API](https://developers.meethue.com/philips-hue-api).
 
 ### Commands
 
@@ -22,6 +22,32 @@ Command | Description
 `ph_description` | Retrieve the bridge device description in XML
 `ph_config` | Retrieve the bridge configuration using an unauthorised request.  The formatted response is written to the standard output.
 
+### Examples
+
+Create a username:
+```sh
+$ ph_username=$(ph_createuser)
+```
+Switch off all lights:
+```sh
+$ ph_put /groups/0/action '{"on":false}'
+```
+Check for non-reachable lights:
+```sh
+$ ph_get /lights | json -al | grep /reachable:false | cut -f 1 -d /
+```
+Search for new lights:
+```sh
+$ ph_post /lights
+```
+Create a group:
+```sh
+$ ph_post /groups '{
+  "name": "My Group",
+  "lights": ["1", "2", "3"]  
+}'
+```
+
 ### Configuation
 
 Variable | Default | Description
@@ -34,7 +60,7 @@ Variable | Default | Description
 ### Installation
 
 - Copy `ph.sh` and `json.sh` to a directory in your `$PATH`, e.g. `~/bin` or `/usr/local/bin`;
-- Load the functions by issuing `. ph.sh` from the command line;
+- Load the commands by issuing `. ph.sh` from the command line;
 - Check that your bridge can be reached by issuing `ph_config` from the command line;
 - Create a username by issuing `ph_createuser` from the command line;
 - Include the following lines in your `.profile` or `.bashrc`:
