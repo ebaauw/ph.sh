@@ -153,7 +153,8 @@ function ph_nupnp() {
   local cmd
   local response
 
-  cmd="curl -s \"https://www.meethue.com/api/nupnp\""
+  cmd="curl -s -H \"Content-Type: application/json\""
+  cmd="${cmd} \"https://www.meethue.com/api/nupnp\""
   ${ph_debug} && echo "debug: meethue portal command: ${cmd}" >&2
   response=$(eval ${cmd})
   if [ $? -ne 0 ] ; then
@@ -170,7 +171,8 @@ function ph_nupnp_deconz() {
   local cmd
   local response
 
-  cmd="curl -s \"https://dresden-light.appspot.com/discover\""
+  cmd="curl -s -H \"Content-Type: application/json\""
+  cmd="${cmd} \"https://dresden-light.appspot.com/discover\""
   ${ph_debug} && echo "debug: deCONZ portal command: ${cmd}" >&2
   response=$(eval ${cmd})
   if [ $? -ne 0 ] ; then
