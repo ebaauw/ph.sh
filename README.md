@@ -54,55 +54,46 @@ While functional, the `bash` implementation of `json` is not very efficient, esp
 
 ### Examples
 Here are some examples how to use the commands provided by `ph.sh`:
-- Create a username and store it in the `ph_username` variable:
-```sh
+
+Create a username and store it in the `ph_username` variable:
+```
 $ ph_username=$(ph_createuser)
 ```
-- Switch off all lights:
-```sh
+Switch off all lights:
+```
 $ ph_put /groups/0/action '{"on":false}'
 ```
-- Check whether light `1` is on:
-```sh
-$ ph_get /lights/1/state/on
+Check whether light `1` is on:
 ```
-  This outputs the value of the `on` attribute:
-```json
-  false
+$ ph_get /lights/1/state/o
+false
 ```
 Note that the Hue API doesn't allow a `get` on `/lights/1/state/on`.  Internally, `ph_get` does the equivalent of:
-```sh
+```
 $ ph_get /lights/1 | json -p /state/on
+false
 ```
-- Check for non-reachable lights:
-```sh
+Check for non-reachable lights, the output contains the ids of the lights for which the `reachable` attribute is `false`:
+```
 $ ph_get /lights | json -al | grep /reachable:false | cut -f 2 -d /
+11
+36
 ```
-  This outputs the ids of the lights for which the `reachable` attribute is `false`:
-```json
-  11
-  36
+Start a search for new lights:
 ```
-- Search for new lights:
-```sh
 $ ph_post /lights
-```
-  This outputs:
-```
 Searching for new devices
+$ ph_get /lights/new
+{
+  "lastscan": "active"
+}
 ```
-- Create a group:
-```sh
-$ ph_post /groups '{
-  "name": "My Group",
-  "lights": ["1", "2", "3"]  
-}'
+Create a group, the output is the id of the newly created group:
 ```
-  This outputs the id for the new group:
-```json
+$ ph_post /groups '{"name": "My Group", "lights": ["1", "2", "3"]}'
 2
 ```
-- Delete the group we just created:
-```sh
+Delete the group we just created:
+```
 $ ph_delete /groups/2
 ```
