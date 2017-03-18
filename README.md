@@ -21,6 +21,7 @@ Command | Description
 `ph_nupnp_deconz` | Query the dresden elektronik portal for registered deCONZ virtual bridges.  The formatted response is written to the standard output.
 `ph_description` | Retrieve the bridge device description in XML
 `ph_config` | Retrieve the bridge configuration using an unauthorised request.  The formatted response is written to the standard output.
+`json` | Format json.  See `json -h` for options.
 
 ### Examples
 

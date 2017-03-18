@@ -78,7 +78,7 @@ The following parameters modify this behaviour:
 
     # Parse options.
     unset OPTIND
-    while getopts :njuakvtlp:c: f ; do
+    while getopts :njuakvtlp:c:h f ; do
       case "${f}" in
         n)  nflag=true
             ;;
@@ -112,6 +112,9 @@ The following parameters modify this behaviour:
             esac
             ;;
         c)  stringarg="${OPTARG}"
+            ;;
+        h)  _json_usage
+            return 1
             ;;
         *)  _json_error "invalid option -${OPTARG}"
             _json_usage
