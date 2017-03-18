@@ -3,7 +3,7 @@
 ## Shell commands for Philips Hue
 Copyright © 2017 Erik Baauw. All rights reserved.
 
-These `bash` scripts provide basic commands for interacting with the [Philips Hue](http://www2.meethue.com/) bridge using the [Philips Hue API](https://developers.meethue.com/philips-hue-api).  These commands can be used to interact manually with your bridge, instead of the CLIP API debugger (see [Getting Started](https://developers.meethue.com/documentation/getting-started)).  They can also be used in scripts to (re-)create your entire Hue bridge configuration (see e.g. [Philips Hue Configuration](http://github.com/ebaauw)).
+This `bash` script provides basic commands for interacting with the [Philips Hue](http://www2.meethue.com/) bridge using the [Philips Hue API](https://developers.meethue.com/philips-hue-api).  These commands can be used to interact manually with your bridge, instead of the CLIP API debugger (see [Getting Started](https://developers.meethue.com/documentation/getting-started)).  They can also be used in other scripts to (re-)create your entire Hue bridge configuration (see e.g. [Philips Hue Configuration](http://github.com/ebaauw/hue-config)).
 
 ### Commands
 The following commands are provided by `ph.sh`:
