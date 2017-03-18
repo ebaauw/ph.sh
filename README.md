@@ -65,7 +65,7 @@ $ ph_put /groups/0/action '{"on":false}'
 ```
 Check whether light `1` is on:
 ```
-$ ph_get /lights/1/state/o
+$ ph_get /lights/1/state/on
 false
 ```
 Note that the Hue API doesn't allow a `get` on `/lights/1/state/on`.  Internally, `ph_get` does the equivalent of:
