@@ -104,7 +104,12 @@ The following parameters modify this behaviour:
         l)  lflag=true
             jflag=true
             ;;
-        p)  patharg="${OPTARG}"
+        p)  case "${OPTARG}" in
+              /*) patharg="${OPTARG:1}"
+                  ;;
+              *)  patharg="${OPTARG}"
+                  ;;
+            esac
             ;;
         c)  stringarg="${OPTARG}"
             ;;
@@ -324,12 +329,12 @@ The following parameters modify this behaviour:
               ${isleaf} = false ] ; then
           :
         elif ${kflag} ; then
-          [ ! -z "${k}" ] && echo "${k}"
+          [ ! -z "${k}" ] && echo "/${k}"
         elif ${vflag} ; then
           echo "${nvalue}"
         else
           [ -z "${k}" ] && echo "${nvalue}" || \
-              echo "${k}:${nvalue}"
+              echo "/${k}:${nvalue}"
         fi
       else
         # Output line for -j, -u.
