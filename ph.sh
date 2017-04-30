@@ -20,8 +20,8 @@ fi
 
 # Set default values.
 : ${ph_username:=empty}
-: ${ph_verbose:=false}
 : ${ph_debug:=false}
+: ${ph_sort:=""}
 
 # ===== BASIC FUNCTIONS ========================================================
 
@@ -58,10 +58,10 @@ function ph_get() {
   response=$(_ph_http GET "/${resource}")
   [ $? -ne 0 ] && return 1
   if [ -z "${path}" ] ; then
-    json -c "${response}"
+    json ${ph_sort} -c "${response}"
     return 0
   fi
-  response=$(json -c "${response}" -p "${path}")
+  response=$(json ${ph_sort} -c "${response}" -p "${path}")
   if [ -z "${response}" ] ; then
     echo "error: '/${path}' not found in resource '/${resource}'" >&2
     return 1
@@ -76,9 +76,6 @@ function ph_put() {
 
   response=$(_ph_http PUT "${1}" "${2}")
   [ $? -eq 0 ] || return 1
-  if ${ph_verbose} ; then
-    json -c "${response}"
-  fi
 }
 
 # Create resource on the Philips Hue bridge.
@@ -88,11 +85,7 @@ function ph_post() {
 
   response=$(_ph_http POST "${1}" "${2}")
   [ $? -eq 0 ] || return 1
-  if ${ph_verbose} ; then
-    json -c "${response}"
-  else
-    ph_unquote "$(json -al -c "${response}" | cut -f 2 -d :)"
-  fi
+  ph_unquote "$(json -al -c "${response}" | cut -f 2 -d :)"
 }
 
 # Delete resource from the Philips Hue Bridge.
@@ -102,9 +95,6 @@ function ph_delete() {
 
   response=$(_ph_http DELETE "${1}")
   [ $? -eq 0 ] || return 1
-  if ${ph_verbose} ; then
-    json -c "${response}"
-  fi
 }
 
 # ===== LIGHT STATE ============================================================
@@ -162,7 +152,7 @@ function ph_nupnp() {
     return 1
   fi
   ${ph_debug} && echo "debug: meethue portal response: ${response}" >&2
-  json -c "${response}"
+  json ${ph_sort} -c "${response}"
 }
 
 # Find deCONZ using nupnp method (through the dresden elektronik portal).
@@ -180,7 +170,7 @@ function ph_nupnp_deconz() {
     return 1
   fi
   ${ph_debug} && echo "debug: deCONZ portal response: ${response}" >&2
-  json -c "${response}"
+  json ${ph_sort} -c "${response}"
 }
 
 # Show bridge UPnP description.

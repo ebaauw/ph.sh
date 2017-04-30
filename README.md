@@ -32,7 +32,6 @@ Variable | Default | Description
 -------- | -------| -----------
 `ph_host` | _discovered_ | Hostname or IP address of the Hue bridge.  When not specified, the meethue portal is queried and the first bridge registered is used.
 `ph_username` | _empty_ | Username of the Hue bridge.  You can create a username using `ph_createuser`.
-`ph_verbose` | `false` | When set to `true`, write the formatted bridge response to standard output for `ph_put`, `ph_post`, and `ph_delete`.
 `ph_debug` | `false` | When set to `true`, issue debug messages to standard error for requests sent to and responses received from the Hue bridge.
 
 ### Installation
