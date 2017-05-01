@@ -156,8 +156,8 @@ function ph_findhost() {
   local response="$(ph_nupnp_deconz)"
   host=$(ph_unquote "$(json -avc "${response}" -p /0/internalipaddress)")
   if [ ! -z "${host}" ] ; then
-    local port=$(ph_unquote "$(json -avc "${response}" -p /0/internalport)")
-    [ "${port}" == "80" ] || host="${host}:${port}"
+    local -i port=$(json -avc "${response}" -p /0/internalport)
+    [ ${port} -eq 80 ] || host="${host}:${port}"
     echo ${host}
     return 0
   fi
