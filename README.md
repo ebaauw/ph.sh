@@ -135,10 +135,10 @@ Here are some examples how to use the commands provided by `ph.sh` in scripting:
   /reachable:true
   ```
 - Check for non-reachable lights
-  ```bash`
+  ```bash
   ph_get /lights | json -al | grep /reachable:false | cut -d / -f 2
   ```
-  The output contains the ids of the lights for which the `reachable` attribute is `false`:
+  The output contains the ids of the lights for which the `state.reachable` attribute is `false`:
   ```json
   11
   36
