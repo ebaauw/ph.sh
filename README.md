@@ -152,7 +152,7 @@ Here are some examples how to use the commands provided by `ph.sh` in scripting:
 - Delete the rules created by the Philips Hue app:
   ```bash
   for user in $(ph_get /config/whitelist | json -al | grep /name:\"hue_ios_app# | cut -d / -f 2) ; do
-    for rule in $(ph_get /rules | json -al | grep /owner:\"${user}\" | cut -d / -f 2) ; do
+    for rule in $(ph_get /rules | json -al | grep "/owner:\"${user}\"" | cut -d / -f 2) ; do
       ph_delete "/rules/${rule}"
     done
   done
