@@ -79,81 +79,81 @@ Here are some examples how to use interactively the commands provided by `ph.sh`
   ph_get /lights/1 | json -p /state/on
   ```
 - Get the state of light `1`:
-```bash
-ph_get /lights/1/state
-```
-The output is formatted for human readability:
-```json
-{
-  "on": false,
-  "bri": 254,
-  "hue": 13195,
-  "sat": 210,
-  "effect": "none",
-  "xy": [
-    0.5106,
-    0.415
-  ],
-  "ct": 463,
-  "alert": "none",
-  "colormode": "xy",
-  "reachable": true
-}
-```
+  ```bash
+  ph_get /lights/1/state
+  ```
+  The output is formatted for human readability:
+  ```json
+  {
+    "on": false,
+    "bri": 254,
+    "hue": 13195,
+    "sat": 210,
+    "effect": "none",
+    "xy": [
+      0.5106,
+      0.415
+    ],
+    "ct": 463,
+    "alert": "none",
+    "colormode": "xy",
+    "reachable": true
+  }
+  ```
 - Create a group:
-```bash
-ph_post /groups '{"name": "My Group", "lights": ["1", "2", "3"]}'
-```
-The output is the id of the newly created group:
-```json
-2
-```
-Delete the group we just created:
-```bash
-ph_delete /groups/2
-```
+  ```bash
+  ph_post /groups '{"name": "My Group", "lights": ["1", "2", "3"]}'
+  ```
+  The output is the id of the newly created group:
+  ```json
+  2
+  ```
+  Delete the group we just created:
+  ```bash
+  ph_delete /groups/2
+  ```
 
 ### Advanced Examples
 Here are some examples how to use the commands provided by `ph.sh` in scripting:
 
 - Use `json -al` to get text output, for further processing with with the likes of `grep` and `cut`:
-```bash
-ph_get /lights/1/state | json -al
-```
-This outputs:
-```bash
-/on:false
-/bri:254
-/hue:13195
-/sat:210
-/effect:"none"
-/xy/0:0.5106
-/xy/1:0.415
-/ct:463
-/alert:"none"
-/colormode:"xy"
-/reachable:true
-```
+  ```bash
+  ph_get /lights/1/state | json -al
+  ```
+  This outputs:
+  ```bash
+  /on:false
+  /bri:254
+  /hue:13195
+  /sat:210
+  /effect:"none"
+  /xy/0:0.5106
+  /xy/1:0.415
+  /ct:463
+  /alert:"none"
+  /colormode:"xy"
+  /reachable:true
+  ```
 - Check for non-reachable lights
-```bash`
-ph_get /lights | json -al | grep /reachable:false | cut -d / -f 2
-```
-The output contains the ids of the lights for which the `reachable` attribute is `false`:
-```json
-11
-36
-```
-To see the names of these lights rather than their numbers, use:
-```bash
-for light in $(ph_get /lights | json -al | grep /reachable:false | cut -d / -f 2) ; do
-  ph_get /lights/${light}/name
-done
-```
-- Delete the rules created by the Philips Hue app:
-```bash
-for user in $(ph_get /config/whitelist | json -al | grep /name:\"hue_ios_app# | cut -d / -f 2) ; do
-  for rule in $(ph_get /rules | json -al | grep /owner:\"${user}\" | cut -d / -f 2) ; do
-    ph_delete "/rules/${rule}"
+  ```bash`
+  ph_get /lights | json -al | grep /reachable:false | cut -d / -f 2
+  ```
+  The output contains the ids of the lights for which the `reachable` attribute is `false`:
+  ```json
+  11
+  36
+  ```
+  To see the names of these lights rather than their numbers, use:
+  ```bash
+  for light in $(ph_get /lights | json -al | grep /reachable:false | cut -d / -f 2) ; do
+    ph_get /lights/${light}/name
   done
-done
-```
+  ```
+- Delete the rules created by the Philips Hue app:
+  ```bash
+  for user in $(ph_get /config/whitelist | json -al | grep /name:\"hue_ios_app# | cut -d / -f 2) ; do
+    for rule in $(ph_get /rules | json -al | grep /owner:\"${user}\" | cut -d / -f 2) ; do
+      ph_delete "/rules/${rule}"
+    done
+  done
+  ```
