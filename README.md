@@ -3,7 +3,7 @@
 ## Shell commands for Philips Hue
 Copyright © 2017 Erik Baauw. All rights reserved.
 
-This `bash` script provides basic commands for interacting with the [Philips Hue](http://www2.meethue.com/) bridge using the [Philips Hue API](https://developers.meethue.com/philips-hue-api).  These commands can be used to interact manually with your bridge, instead of the CLIP API debugger (see [Getting Started](https://developers.meethue.com/documentation/getting-started)).  They can also be used in other scripts to (re-)create your entire Hue bridge configuration (see e.g. [Philips Hue Configuration](http://github.com/ebaauw/hue-config)).
+This `bash` script provides basic commands for interacting with the [Philips Hue](http://www2.meethue.com/) bridge using the [Philips Hue API](https://developers.meethue.com/philips-hue-api).  These commands can be used to interact manually with your bridge, instead of the CLIP API debugger (see [Getting Started](https://developers.meethue.com/documentation/getting-started)).  They can also be used in other scripts to (re-)create your entire Hue bridge configuration.
 
 ### Commands
 The following commands are provided by `ph.sh`:
@@ -20,7 +20,7 @@ Command | Description
 `ph_reset_homekit` | Reset the HomeKit configuration for a v2 (square) Hue bridge
 `ph_nupnp` | Query the meethue portal for registered bridges.  The formatted response is written to the standard output.
 `ph_nupnp_deconz` | Query the dresden elektronik portal for registered deCONZ virtual bridges.  The formatted response is written to the standard output.
-`ph_description` | Retrieve the bridge device description in XML
+`ph_description` | Retrieve the bridge device description in XML.
 `ph_config` | Retrieve the bridge configuration using an unauthorised request.  The formatted response is written to the standard output.
 
 These commands depend on `curl`, to call the Hue bridge, and on `json`, to format the Hue bridge responses into human readable or machine readable output.  A `bash` implementation of `json` is provided by `json.sh`.  See `json -h` for its usage.
