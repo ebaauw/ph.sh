@@ -16,16 +16,8 @@
 json -c 0 >/dev/null 2>&1
 [ $? -eq 0 ] || . json.sh
 
-# Check whether ph_host is set, otherwise use first bridge registered to
-# meethue portal.
-if [ -z "${ph_host}" ] ; then
-  ph_host=$(ph_unquote "$(ph_nupnp | json -avp /0/internalipaddress)")
-fi
-if [ -z "${ph_host}" ] ; then
-  ph_host=$(ph_unquote "$(ph_nupnp_deconz | json -avp /0/internalipaddress)")
-fi
-
 # Set default values.
+: ${ph_host:=$(ph_findhost)}
 : ${ph_username:=empty}
 : ${ph_debug:=false}
 : ${ph_sort:=""}
