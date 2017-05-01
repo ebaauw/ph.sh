@@ -17,16 +17,6 @@ Command | Description
 `ph_patch` _resource_ _body_ | Updates _resource_ on the bridge. <br>Not supported by Philips Hue bridges.
 `ph_post` _resource_ _body_ | Creates _resource_ on the bridge. <br>The ID of the resource created is written to the standard output.
 `ph_delete` _resource_ | Deletes _resource_ from the bridge.
-<<<<<<< Updated upstream
-`ph_linkbutton` | Simulates pressing the link button on the bridge, to allow an application to create a username.
-`ph_createuser` | Create a username for `ph.sh`.  The username is written to the standard output.
-`ph_touchlink` | Initiate a touchlink on the Hue bridge.
-`ph_reset_homekit` | Reset the HomeKit configuration for a v2 (square) Hue bridge
-`ph_nupnp` | Query the meethue portal for registered bridges.  The formatted response is written to the standard output.
-`ph_nupnp_deconz` | Query the dresden elektronik portal for registered deCONZ virtual bridges.  The formatted response is written to the standard output.
-`ph_description` | Retrieve the bridge device description in XML.
-`ph_config` | Retrieve the bridge configuration using an unauthorised request.  The formatted response is written to the standard output.
-=======
 `ph_linkbutton` | Simulates pressing the link button on the bridge, to allow an application to register. <br>Not currently supported by deCONZ bridges.
 `ph_createuser` | Register `ph.sh` on the bridge. <br>The username created by the bridge is written to the standard output.
 `ph_touchlink` | Initiate a touchlink on the bridge. <br>Not currently supported by deCONZ bridges.
@@ -94,21 +84,21 @@ ph_get /lights/1/state
 ```
 The output is formatted for human readability:
 ```json
-  {
-    "on": false,
-    "bri": 254,
-    "hue": 13195,
-    "sat": 210,
-    "effect": "none",
-    "xy": [
-      0.5106,
-      0.415
-    ],
-    "ct": 463,
-    "alert": "none",
-    "colormode": "xy",
-    "reachable": true
-  }
+{
+  "on": false,
+  "bri": 254,
+  "hue": 13195,
+  "sat": 210,
+  "effect": "none",
+  "xy": [
+    0.5106,
+    0.415
+  ],
+  "ct": 463,
+  "alert": "none",
+  "colormode": "xy",
+  "reachable": true
+}
 ```
 - Create a group:
 ```bash
@@ -155,15 +145,15 @@ The output contains the ids of the lights for which the `reachable` attribute is
 ```
 To see the names of these lights rather than their numbers, use:
 ```bash
-  for light in $(ph_get /lights | json -al | grep /reachable:false | cut -d / -f 2) ; do
-    ph_get /lights/${light}/name
-  done
+for light in $(ph_get /lights | json -al | grep /reachable:false | cut -d / -f 2) ; do
+  ph_get /lights/${light}/name
+done
 ```
 - Delete the rules created by the Philips Hue app:
 ```bash
-  for user in $(ph_get /config/whitelist | json -al | grep /name:\"hue_ios_app# | cut -d / -f 2) ; do
-    for rule in $(ph_get /rules | json -al | grep /owner:\"${user}\" | cut -d / -f 2) ; do
-      ph_delete "/rules/${rule}"
-    done
+for user in $(ph_get /config/whitelist | json -al | grep /name:\"hue_ios_app# | cut -d / -f 2) ; do
+  for rule in $(ph_get /rules | json -al | grep /owner:\"${user}\" | cut -d / -f 2) ; do
+    ph_delete "/rules/${rule}"
   done
+done
 ```
