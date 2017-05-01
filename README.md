@@ -21,8 +21,8 @@ Command | Description
 `ph_createuser` | Register `ph.sh` on the bridge. <br>The username created by the bridge is written to the standard output.
 `ph_touchlink` | Initiate a touchlink on the bridge. <br>Not currently supported by deCONZ bridges.
 `ph_reset_homekit` | Reset the HomeKit configuration for a v2 (square) Philips Hue bridge.
-`ph_findhost` | Find the first available bridge. <br>The host is written to the standard output.
-`ph_nupnp` | Query the meethue portal for registered bridges. <br>The formatted response is written to the standard output.
+`ph_findhost` | Find the first registered bridge on the meethue or dresden elektronik portal. <br>The host is written to the standard output.
+`ph_nupnp` | Query the meethue portal for registered Philips Hue bridges. <br>The formatted response is written to the standard output.
 `ph_nupnp_deconz` | Query the dresden elektronik portal for registered deCONZ bridges. <br>The formatted response is written to the standard output.
 `ph_description` | Retrieve the bridge device description in XML.
 `ph_config` | Retrieve the bridge configuration using an unauthorised request. <br>The formatted response is written to the standard output. <br>Not currently supported by deCONZ bridges.
