@@ -59,25 +59,25 @@ While functional, the `bash` implementation of `json` is not very efficient, esp
 Here are some examples how to use interactively the commands provided by `ph.sh`:
 
 - Create a username and store it in the `ph_username` variable:
-```bash
-ph_username=$(ph_createuser)
-```
+  ```bash
+  ph_username=$(ph_createuser)
+  ```
 - Switch off all lights:
-```bash
-ph_put /groups/0/action '{"on":false}'
-```
+  ```bash
+  ph_put /groups/0/action '{"on":false}'
+  ```
 - Check whether light `1` is on:
-```bash
-ph_get /lights/1/state/on
-```
-The output is the value of the `state.on` attribute:
-```json
-false
-```
-Note that the Hue API doesn't allow a `GET` on `/lights/1/state/on`.  Internally, `ph_get` does the equivalent of:
-```bash
-ph_get /lights/1 | json -p /state/on
-```
+  ```bash
+  ph_get /lights/1/state/on
+  ```
+  The output is the value of the `state.on` attribute:
+  ```json
+  false
+  ```
+  Note that the Hue API doesn't allow a `GET` on `/lights/1/state/on`.  Internally, `ph_get` does the equivalent of:
+  ```bash
+  ph_get /lights/1 | json -p /state/on
+  ```
 - Get the state of light `1`:
 ```bash
 ph_get /lights/1/state
