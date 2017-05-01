@@ -3,19 +3,26 @@
 # ph.sh
 # Copyright © 2017 Erik Baauw. All rights reserved.
 #
-# Shell library for interacting with the Philips Hue bridge using its REST API.
-# Except where noted, functions work on deCONZ as well.
+# Shell library for interacting with a Philips Hue or compatible bridge using
+# the Philips Hue or compatible REST API.
+# Currently tested on the following bridges:
+# - Philips Hue v2 (square) bridge;
+# - Philips Hue v1 (round) brudge;
+# - dresden elektronik deCONZ REST API plugin.
 
 # ===== CONFIGURATION ==========================================================
 
 # Check whether json command is available, otherwise load json.sh.
 json -c 0 >/dev/null 2>&1
-[ $? -ne 0 ] && . json.sh
+[ $? -eq 0 ] || . json.sh
 
 # Check whether ph_host is set, otherwise use first bridge registered to
 # meethue portal.
 if [ -z "${ph_host}" ] ; then
   ph_host=$(ph_unquote "$(ph_nupnp | json -avp /0/internalipaddress)")
+fi
+if [ -z "${ph_host}" ] ; then
+  ph_host=$(ph_unquote "$(ph_nupnp_deconz | json -avp /0/internalipaddress)")
 fi
 
 # Set default values.
@@ -56,7 +63,7 @@ function ph_get() {
       ;;
   esac
   response=$(_ph_http GET "/${resource}")
-  [ $? -ne 0 ] && return 1
+  [ $? -eq 0 ] || return 1
   if [ -z "${path}" ] ; then
     json ${ph_sort} -c "${response}"
     return 0
@@ -78,6 +85,15 @@ function ph_put() {
   [ $? -eq 0 ] || return 1
 }
 
+# Update resource on Philips Hue bridge.
+# Usage: ph_patch resource body
+function ph_patch() {
+  local response
+
+  response=$(_ph_http PATCH "${1}" "${2}")
+  [ $? -eq 0 ] || return 1
+}
+
 # Create resource on the Philips Hue bridge.
 # Usage: id=$(ph_post resource body)
 function ph_post() {
@@ -85,7 +101,7 @@ function ph_post() {
 
   response=$(_ph_http POST "${1}" "${2}")
   [ $? -eq 0 ] || return 1
-  ph_unquote "$(json -al -c "${response}" | cut -f 2 -d :)"
+  ph_unquote "$(json -al -c "${response}" | cut -d : -f 2)"
 }
 
 # Delete resource from the Philips Hue Bridge.
@@ -110,26 +126,25 @@ ph_ct_energize=156      # 6,410 Kelvin
 
 # ===== BRIDGE FUNCTIONS =======================================================
 
-# Press bridge link button (Hue bridge only).
+# Press bridge link button (Philips Hue bridge only).
 # Usage: ph_linkbutton
 function ph_linkbutton() {
   ph_put /config '{"linkbutton": true}'
 }
 
-# Create username.
-# Usage ph_username
+# Register ph.sh application on the bridge and create a corresponding username.
+# Usage ph_username=$(ph_createuser)
 function ph_createuser() {
-  local devicetype="ph.sh#$(hostname -s)"
-  ph_username= ph_post / "{\"devicetype\":\"${devicetype}\"}"
+  ph_username= ph_post / "{\"devicetype\":\"ph.sh#$(hostname -s)\"}"
 }
 
-# Perform bridge touchlink (Hue bridge only).
+# Perform bridge touchlink (Philips Hue bridge only).
 # Usage: ph_touchlink
 function ph_touchlink() {
   ph_put /config '{"touchlink": true}'
 }
 
-# Reset bridge homekit status (Hue bridge v2 only).
+# Reset bridge homekit status (Philips Hue v2 (square) bridge only).
 # Usage: ph_reset_homekit
 function ph_reset_homekit() {
   ph_put /config '{"homekit":{"factoryreset": true}}'
@@ -137,7 +152,26 @@ function ph_reset_homekit() {
 
 # ===== BRIDGE DISCOVERY =======================================================
 
-# Find bridges using nupnp method (through the meethue portal).
+# Find a bridge.
+# Usage: ph_host="$(ph_findhost)"
+function ph_findhost() {
+  local host
+  host=$(ph_unquote "$(ph_nupnp | json -avp /0/internalipaddress)")
+  if [ ! -z "${host}" ] ; then
+    echo "${host}"
+    return 0
+  fi
+  local response="$(ph_nupnp_deconz)"
+  host=$(ph_unquote "$(json -avc "${response}" -p /0/internalipaddress)")
+  if [ ! -z "${host}" ] ; then
+    local port=$(ph_unquote "$(json -avc "${response}" -p /0/internalport)")
+    [ "${port}" == "80" ] || host="${host}:${port}"
+    echo ${host}
+    return 0
+  fi
+}
+
+# Find Philips Hue bridges through the meethue portal (nupnp method).
 # Usage: ph_nupnp
 function ph_nupnp() {
   local cmd
@@ -155,7 +189,7 @@ function ph_nupnp() {
   json ${ph_sort} -c "${response}"
 }
 
-# Find deCONZ using nupnp method (through the dresden elektronik portal).
+# Find deCONZ bridges through the dresden elektronik portal (nupnp method).
 # Usage: ph_nupnp_deconz
 function ph_nupnp_deconz() {
   local cmd
@@ -190,7 +224,7 @@ function ph_description {
   echo "${response}"
 }
 
-# Unauthorised config (Hue bridge only).
+# Unauthorised config (Philips Hue bridge only).
 # Usage: ph_config
 function ph_config() {
   ph_username= ph_get /config
@@ -198,10 +232,10 @@ function ph_config() {
 
 # ===== UTILITY FUNCTIONS ======================================================
 
-# Issue HTTP command to Philips Hue bridge and return response.
+# Issue a HTTP command to the bridge and return response.
 # Note response is returned only when bridge command succeeded.  Otherwise a
 # message is printed on standard error and a non-zero status is returned.
-# Usage: response=$(ph_http GET|PUT|POST|DELETE resource [body])
+# Usage: response=$(ph_http GET|PUT|PATCH|POST|DELETE resource [body])
 function _ph_http() {
   local resource
   local method
@@ -217,7 +251,7 @@ function _ph_http() {
       method=
       data=
       ;;
-    PUT|POST)
+    PUT|PATCH|POST)
       method=" -X ${1}"
       if [ -z "${3}" ] ; then
         data=
@@ -273,7 +307,7 @@ function _ph_http() {
     echo "error: invalid method ${1} for resource ${2}" >&2
     return 1
   fi
-  errorlines=$(echo "${responselines}" | grep /error/type: | cut -f 2 -d /)
+  errorlines=$(echo "${responselines}" | grep /error/type: | cut -d / -f 2)
   if [ ! -z "${errorlines}" ] ; then
     for i in ${errorlines} ; do
       local -i errno=$(json -avp /${i}/error/type -c "${response}")
