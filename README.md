@@ -23,9 +23,10 @@ Command | Description
 `ph_reset_homekit` | Reset the HomeKit configuration for a v2 (square) Philips Hue bridge.
 `ph_findhost` | Find the first registered bridge on the meethue or dresden elektronik portal. <br>The host is written to the standard output.
 `ph_nupnp` | Query the meethue portal for registered Philips Hue bridges. <br>The formatted response is written to the standard output.
-`ph_nupnp_deconz` | Query the dresden elektronik portal for registered deCONZ bridges. <br>The formatted response is written to the standard output.
+`ph_nupnp_deconz`| Query the dresden elektronik portal for registered deCONZ bridges. <br>The formatted response is written to the standard output.
 `ph_description` | Retrieve the bridge device description in XML.
 `ph_config` | Retrieve the bridge configuration using an unauthorised request. <br>The formatted response is written to the standard output. <br>Not currently supported by deCONZ bridges.
+`ph_light_values` _light_ | Discover values for `ct` and `xy` supported by _light_. <br>Note that this might take several minutes.  Set `ph_verbose=true` to see progress messages on standard error. <br>The formatted response is written to the standard output.
 
 These commands depend on `curl`, to send HTTP requests to the bridge, and on `json`, to format the bridge responses into human readable or machine readable output.  A `bash` implementation of `json` is provided by `json.sh`.  See `json -h` for its usage.
 
@@ -36,6 +37,8 @@ Variable | Default | Description
 -------- | -------| -----------
 `ph_host` | _discovered_ | The hostname or IP address (and port) of the bridge. <br>Set to the first bridge registered on the meethue or dresden elektronik portal, when not set while loading `ph.sh`.
 `ph_username` | _empty_ | The username on the bridge used to authenticate requests. <br>You can create a username using `ph_createuser`.
+`ph_json_args` | _empty_ | Arguments to pass to `json` when formatting output.
+`ph_verbose` | `false` | When set to `true`, issue info messages to standard error.
 `ph_debug` | `false` | When set to `true`, issue debug messages to standard error for requests sent to and responses received from the bridge.
 
 ### Installation
@@ -111,6 +114,37 @@ Here are some examples how to use interactively the commands provided by `ph.sh`
   Delete the group we just created:
   ```bash
   ph_delete /groups/2
+  ```
+- Analyse a light:
+  ```bash
+  ph_light_values 1
+  ```
+  The output contains the result:
+  ```json
+  {
+    "manufacturer": "Philips",
+    "modelid": "LCT003",
+    "type": "Extended color light",
+    "bri": true,
+    "ct": {
+      "min": 153,
+      "max": 500
+    },
+    "xy": {
+      "r": [
+        0.675,
+        0.322
+      ],
+      "g": [
+        0.409,
+        0.518
+      ],
+      "b": [
+        0.167,
+        0.04
+      ]
+    }
+  }
   ```
 
 ### Advanced Examples

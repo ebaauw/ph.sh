@@ -10,17 +10,9 @@
 # - Philips Hue v1 (round) brudge;
 # - dresden elektronik deCONZ REST API plugin.
 
-# ===== CONFIGURATION ==========================================================
-
 # Check whether json command is available, otherwise load json.sh.
 json -c 0 >/dev/null 2>&1
 [ $? -eq 0 ] || . json.sh
-
-# Set default values.
-: ${ph_host:=$(ph_findhost)}
-: ${ph_username:=empty}
-: ${ph_debug:=false}
-: ${ph_sort:=""}
 
 # ===== BASIC FUNCTIONS ========================================================
 
@@ -57,10 +49,10 @@ function ph_get() {
   response=$(_ph_http GET "/${resource}")
   [ $? -eq 0 ] || return 1
   if [ -z "${path}" ] ; then
-    json ${ph_sort} -c "${response}"
+    json ${ph_json_args} -c "${response}"
     return 0
   fi
-  response=$(json ${ph_sort} -c "${response}" -p "${path}")
+  response=$(json ${ph_json_args} -c "${response}" -p "${path}")
   if [ -z "${response}" ] ; then
     echo "error: '/${path}' not found in resource '/${resource}'" >&2
     return 1
@@ -178,16 +170,17 @@ function ph_nupnp() {
     return 1
   fi
   ${ph_debug} && echo "debug: meethue portal response: ${response}" >&2
-  json ${ph_sort} -c "${response}"
+  json ${ph_json_args} -c "${response}"
 }
 
 # Find deCONZ bridges through the dresden elektronik portal (nupnp method).
-# Usage: ph_nupnp_deconz
+# Usage: ph_nupnp_deconz [-4|-6]
 function ph_nupnp_deconz() {
   local cmd
   local response
 
   cmd="curl -s -H \"Content-Type: application/json\""
+  [ "${1}" == "-4" -o "${1}" == "-6" ] && cmd="${cmd} ${1}"
   cmd="${cmd} \"https://dresden-light.appspot.com/discover\""
   ${ph_debug} && echo "debug: deCONZ portal command: ${cmd}" >&2
   response=$(eval ${cmd})
@@ -196,7 +189,7 @@ function ph_nupnp_deconz() {
     return 1
   fi
   ${ph_debug} && echo "debug: deCONZ portal response: ${response}" >&2
-  json ${ph_sort} -c "${response}"
+  json ${ph_json_args} -c "${response}"
 }
 
 # Show bridge UPnP description.
@@ -220,6 +213,106 @@ function ph_description {
 # Usage: ph_config
 function ph_config() {
   ph_username= ph_get /config
+}
+
+# ===== LIGHT VALUES ===========================================================
+
+# Discover values for ct and xy supported by light.
+# Usage: ph_light_values id
+function ph_light_values() {
+  local light=/lights/${1}
+  local state=${light}/state
+  local response
+  response=$(ph_get /lights/${1})
+  if [ $? -ne 0 ] ; then
+    return 1
+  fi
+  local manufacturer="$(json -c "${response}" -p /manufacturername)"
+  [ -z "${manufacturer}" ] && manufacturer="$(json -c "${response}" -p /manufacturer)"
+  local model="$(json -c "${response}" -p /modelid)"
+  local ltype="$(json -c "${response}" -p /type)"
+  local name="$(json -c "${response}" -p /name)"
+  local on="$(json -c "${response}" -p /state/on)"
+  local bri="$(json -c "${response}" -p /state/bri)"
+  local ct="$(json -c "${response}" -p /state/ct)"
+  local xy="$(json -c "${response}" -p /state/xy)"
+
+  ${ph_verbose} && echo "${light}: $(ph_unquote "${manufacturer}") $(ph_unquote "${model}") ($(ph_unquote "${ltype}")) ${name}" >&2
+
+  local ct
+  local ct_min
+  local ct_max
+  local xy
+  local xy_red
+  local xy_green
+  local xy_blue
+
+  function ct_value() {
+    ${ph_verbose} && echo -n "${light}: ct: ${1} .." >&2
+    ph_put ${state} "{\"ct\":${2}}"
+    ct=$(ph_get ${state}/ct | json -n)
+    local -i n=0
+    while [ "${ct}" == "${2}" -a ${n} -le ${3} ] ; do
+      ${ph_verbose} && echo -n . >&2
+      sleep 5
+      ct=$(ph_get ${state}/ct | json -n)
+      n=$((n + 1))
+    done
+    ${ph_verbose} && echo " ${ct}" >&2
+  }
+
+  # analyse_xy colour xy
+  function xy_value() {
+    ${ph_verbose} && echo -n "${light}: xy: ${1} .." >&2
+    ph_put ${state} "{\"xy\":${2}}"
+    xy=$(ph_get ${state}/xy | json -n)
+    while [ "${xy}" == "${2}" ] ; do
+      ${ph_verbose} && echo -n . >&2
+      sleep 5
+      xy=$(ph_get ${state}/xy | json -n)
+    done
+    ${ph_verbose} && echo " ${xy}" >&2
+  }
+
+  ph_put ${state} '{"on":true}'
+
+  if [ ! -z "${ct}" ] ; then
+    local bridge=$(ph_get /config/modelid)
+    local max=0
+    [ "${bridge}" == '"deCONZ"' ] && max=60
+    ct_value cool 153 ${max}
+    ct_min=${ct}
+    ct_value warm 500 ${max}
+    ct_max=${ct}
+  fi
+
+  if [ ! -z "${xy}" ] ; then
+    xy_value red '[1.0,0.0]'
+    xy_red=${xy}
+    xy_value green '[0.0,1.0]'
+    xy_green=${xy}
+    xy_value blue '[0.0,0.0]'
+    xy_blue=${xy}
+  fi
+
+  ph_put ${state} '{"on":false}'
+  ${ph_verbose} && echo "${light}: done"
+
+  local s="{"
+  s="${s}\"manufacturer\": ${manufacturer}"
+  s="${s},\"modelid\": ${model}"
+  s="${s},\"type\": ${ltype}"
+  if [ ! -z "${bri}" ] ; then
+    s="${s},\"bri\":true"
+  fi
+  if [ ! -z "${ct}" ] ; then
+    s="${s},\"ct\":{\"min\":${ct_min},\"max\":${ct_max}}"
+  fi
+  if [ ! -z "${xy}" ] ; then
+    s="${s},\"xy\":{\"r\":${xy_red},\"g\":${xy_green},\"b\":${xy_blue}}"
+  fi
+  s="${s}}"
+  json -c "${s}"
 }
 
 # ===== UTILITY FUNCTIONS ======================================================
@@ -325,3 +418,12 @@ function ph_quote() {
 function ph_unquote() {
   [[ "${1}" == '"'*'"' ]] && eval echo "${1}" || echo "${1}"
 }
+
+# ===== CONFIGURATION ==========================================================
+
+# Set default values.
+: ${ph_host:=$(ph_findhost)}
+: ${ph_username:=empty}
+: ${ph_verbose:=false}
+: ${ph_debug:=false}
+: ${ph_json_args:=""}
