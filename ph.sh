@@ -26,24 +26,30 @@ function ph_get() {
   local p="${resource%%/*}"
   local response
 
-  case "${p}" in
-    lights|groups|schedules|scenes|sensors|rules|resourcelinks)
-      path="${resource#${p}}"
-      path="${path#/}"
-      resource="${p}"
-      p="${path%%/*}"
-      if [[ "${p}" == [A-Za-z0-9-]* ]] ; then
-        resource="${resource}/${p}"
-        path="${path#${p}}"
-        path="${path#/}"
-      fi
-      ;;
-    config|capabilities)
-      path="${resource#${p}}"
-      path="${path#/}"
-      resource="${p}"
+  case "${1}" in
+    /groups/*/scene*)
       ;;
     *)
+      case "${p}" in
+        lights|groups|schedules|scenes|sensors|rules|resourcelinks)
+          path="${resource#${p}}"
+          path="${path#/}"
+          resource="${p}"
+          p="${path%%/*}"
+          if [[ "${p}" == [A-Za-z0-9-]* ]] ; then
+            resource="${resource}/${p}"
+            path="${path#${p}}"
+            path="${path#/}"
+          fi
+          ;;
+        config|capabilities)
+          path="${resource#${p}}"
+          path="${path#/}"
+          resource="${p}"
+          ;;
+        *)
+          ;;
+      esac
       ;;
   esac
   response=$(_ph_http GET "/${resource}")
