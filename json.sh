@@ -10,7 +10,7 @@
 # Usage: json [-njuakvtl] [-p path] [-c string | file]
 function json() {
   local -i nlines=0    # Number lines output.
-  local value=        # Last value parsed.
+  local value=         # Last value parsed.
   local nvalue=        # Last value parsed w/o white space.
 
   # Parameters
@@ -23,6 +23,7 @@ function json() {
   local tflag=false
   local lflag=false
   local patharg=
+  local cflag=false
   local stringarg=
   local filearg=
 
@@ -111,7 +112,8 @@ The following parameters modify this behaviour:
                   ;;
             esac
             ;;
-        c)  stringarg="${OPTARG}"
+        c)  cflag=true
+            stringarg="${OPTARG}"
             ;;
         h)  _json_usage
             return 1
@@ -125,7 +127,7 @@ The following parameters modify this behaviour:
     shift $((${OPTIND} - 1))
     [ $# -gt 1 ] && _json_usage && return 1
     if [ $# -ge 1 ] ; then
-      [ ! -z "${stringarg}" ] && _json_usage && return 1
+      ${cflag} && _json_usage && return 1
       [ ! -r "${1}" ] && _json_error "${1}: cannot open" && return 1
       filearg="${1}"
     fi
@@ -164,7 +166,7 @@ The following parameters modify this behaviour:
 
     if [ ! -z "${filearg}" ] ; then
       egrep -ao "${spc}|${str}|${num}|${wrd}|." <"${filearg}"
-    elif [ ! -z "${stringarg}" ] ; then
+    elif ${cflag} ; then
       egrep -ao "${spc}|${str}|${num}|${wrd}|." <<<"${stringarg}"
     else
       egrep -ao "${spc}|${str}|${num}|${wrd}|."
