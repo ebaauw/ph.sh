@@ -140,6 +140,12 @@ function ph_reset_homekit() {
   ph_put /config '{"homekit":{"factoryreset": true}}'
 }
 
+# Restart the deCONZ gateway.
+# Usage: ph_restart
+function ph_restart() {
+  ph_post /config/restartapp
+}
+
 # ===== BRIDGE DISCOVERY =======================================================
 
 # Find a bridge.
@@ -253,12 +259,21 @@ function ph_light_values() {
   local xy_green
   local xy_blue
 
+  local -i max=0
+  local zero="0.0000"
+  local one="1.0000"
+  if [ "$(ph_get /config/modelid)" == '"deCONZ"' ] ; then
+    max=60
+    zero="0"
+    one="1"
+  fi
+
   function ct_value() {
     ${ph_verbose} && echo -n "${light}: ct: ${1} .." >&2
     ph_put ${state} "{\"ct\":${2}}"
     ct=$(ph_get ${state}/ct | json -n)
     local -i n=0
-    while [ "${ct}" == "${2}" -a ${n} -le ${3} ] ; do
+    while [ "${ct}" == "${2}" -a ${n} -le ${max} ] ; do
       ${ph_verbose} && echo -n . >&2
       sleep 5
       ct=$(ph_get ${state}/ct | json -n)
@@ -283,21 +298,18 @@ function ph_light_values() {
   ph_put ${state} '{"on":true}'
 
   if [ ! -z "${ct}" ] ; then
-    local bridge=$(ph_get /config/modelid)
-    local max=0
-    [ "${bridge}" == '"deCONZ"' ] && max=60
-    ct_value cool 153 ${max}
+    ct_value cool 153
     ct_min=${ct}
-    ct_value warm 500 ${max}
+    ct_value warm 500
     ct_max=${ct}
   fi
 
   if [ ! -z "${xy}" ] ; then
-    xy_value red '[1.0,0.0]'
+    xy_value red "[${one},${zero}]"
     xy_red=${xy}
-    xy_value green '[0.0,1.0]'
+    xy_value green "[${zero},${one}]"
     xy_green=${xy}
-    xy_value blue '[0.0,0.0]'
+    xy_value blue "[${zero},${zero}]"
     xy_blue=${xy}
   fi
 
@@ -429,6 +441,7 @@ function ph_unquote() {
 
 # Set default values.
 : ${ph_host:=$(ph_findhost)}
+: ${ph_host:="127.0.0.1"}
 : ${ph_username:=empty}
 : ${ph_verbose:=false}
 : ${ph_debug:=false}
