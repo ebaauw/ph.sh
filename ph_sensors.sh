@@ -36,6 +36,8 @@
 function ph_sensors_init() {
   local -i id
 
+  ph_restart
+
   # Clear names of existing sensors.
   for id in $(ph_get /sensors | json -al |
               grep /name: | cut -d / -f 2) ; do
@@ -53,13 +55,12 @@ function ph_sensors_init() {
       "type": "CLIPGenericFlag",
       "modelid": "_dummy",
       "manufacturername": "_dummy",
-      "swversion": "1",
+      "swversion": "0",
       "uniqueid": "_dummy"
     }' 2>/dev/null)
     [ $? -eq 0 ] || break
     ${ph_verbose} && echo "/sensors/${id}: created dummy sensor" >&2
   done
-  ${ph_verbose} && echo "/sensors/${id}: created dummy sensor" >&2
 
   # Delete existing Hue motion sensor resoucelinks.
   for id in $(ph_get /resourcelinks | json -al |
@@ -77,146 +78,77 @@ function ph_sensors_cleanup() {
     ph_delete "/sensors/${id}"
     ${ph_verbose} && echo "/sensors/${id}: deleted dummy sensor" >&2
   done
+  ph_restart
 }
 
 # ===== CLIP SENSORS ===========================================================
 
-# Create CLIPGenericFlag sensor.
-# Usage: ph_sensor_clip_flag id name [readonly]
-function ph_sensor_clip_flag() {
-  local id="$(echo "${1}" | cut -d - -f 1)"
-  local version=1
-  [ -z "${3}" ] || version=0
-  ph_delete "/sensors/${id}"
+# Create CLIP sensor.
+# Usage: id=$(_ph_sensor_clip id mid name type [swversion])
+function _ph_sensor_clip()
+{
+  ph_delete "/sensors/${1}" >/dev/null 2>&1
+  ph_restart
   id=$(ph_post "/sensors" "{
-    \"name\": \"${2}\",
-    \"type\": \"CLIPGenericFlag\",
-    \"modelid\": \"CLIPGenericFlag\",
+    \"name\": \"${3}\",
+    \"type\": \"${4}\",
+    \"modelid\": \"${4}\",
     \"manufacturername\": \"homebridge-hue\",
-    \"swversion\": \"${version}\",
-    \"uniqueid\": \"/sensors/${1}\"
+    \"swversion\": \"${5:-0}\",
+    \"uniqueid\": \"/sensors/${2}${2:+-}${1}\"
   }")
-  ${ph_verbose} && echo "/sensors/${id}: CLIPGenericFlag ${2}" >&2
+  [ $? -ne 0 ] && return 1
+  ${ph_verbose} && echo "/sensors/${id}: ${4} ${3}" >&2
+  [ ${id} -ne ${1} ] && echo "/sensors/${id}: warning: requested id ${1}" >&2
   echo ${id}
+}
+
+# Create CLIPGenericFlag sensor.
+# Usage: id=$(ph_sensor_clip_flag id mid name [readonly])
+function ph_sensor_clip_flag() {
+  _ph_sensor_clip "${1}" "${2}" "${3}" CLIPGenericFlag "${4:+1}"
 }
 
 # Create CLIPGenericStatus sensor.
-# Usage: ph_sensor_clip_status id name [min max]]
+# Usage: ph_sensor_clip_status id mid name [min max]]
 function ph_sensor_clip_status() {
-  local id="$(echo "${1}" | cut -d - -f 1)"
-  ph_delete "/sensors/${1}"
-  id=$(ph_post "/sensors" "{
-    \"name\": \"${2}\",
-    \"type\": \"CLIPGenericStatus\",
-    \"modelid\": \"CLIPGenericStatus\",
-    \"manufacturername\": \"homebridge-hue\",
-    \"swversion\": \"${3:-0},${4:-2}\",
-    \"uniqueid\": \"/sensors/${1}\"
-  }")
-  ${ph_verbose} && echo "/sensors/${id}: CLIPGenericStatus ${2}" >&2
-  echo ${id}
+  _ph_sensor_clip "${1}" "${2}" "${3}" CLIPGenericStatus "${4:-0},${5:-2}"
 }
 
-# Create CLIPTemperature sensor.
-# Usage: ph_sensor_clip_lightlevel id name
+# Create CLIPPresence sensor.
+# Usage: ph_sensor_clip_presence id mid ame
 function ph_sensor_clip_presence() {
-  local id="$(echo "${1}" | cut -d - -f 1)"
-  ph_delete "/sensors/${1}"
-  id=$(ph_post "/sensors" "{
-    \"name\": \"${2}\",
-    \"type\": \"CLIPPresence\",
-    \"modelid\": \"CLIPPresence\",
-    \"manufacturername\": \"homebridge-hue\",
-    \"swversion\": \"0\",
-    \"uniqueid\": \"/sensors/${1}\"
-  }")
-  ${ph_verbose} && echo "/sensors/${id}: CLIPPresence ${2}" >&2
-  echo ${id}
+  _ph_sensor_clip "${1}" "${2}" "${3}" CLIPPresence
 }
 
-# Create CLIPTemperature sensor.
+# Create CLIPLightLevel sensor.
 # Usage: ph_sensor_clip_lightlevel id name
 function ph_sensor_clip_lightlevel() {
-  local id="$(echo "${1}" | cut -d - -f 1)"
-  ph_delete "/sensors/${1}"
-  id=$(ph_post "/sensors" "{
-    \"name\": \"${2}\",
-    \"type\": \"CLIPLightLevel\",
-    \"modelid\": \"CLIPLightLevel\",
-    \"manufacturername\": \"homebridge-hue\",
-    \"swversion\": \"0\",
-    \"uniqueid\": \"/sensors/${1}\"
-  }")
-  ${ph_verbose} && echo "/sensors/${id}: CLIPLightLevel ${2}" >&2
-  echo ${id}
+  _ph_sensor_clip "${1}" "${2}" "${3}" CLIPLightLevel
 }
 
 # Create CLIPTemperature sensor.
 # Usage: ph_sensor_clip_temperature id name
 function ph_sensor_clip_temperature() {
-  local id="$(echo "${1}" | cut -d - -f 1)"
-  ph_delete "/sensors/${1}"
-  id=$(ph_post "/sensors" "{
-    \"name\": \"${2}\",
-    \"type\": \"CLIPTemperature\",
-    \"modelid\": \"CLIPTemperature\",
-    \"manufacturername\": \"homebridge-hue\",
-    \"swversion\": \"0\",
-    \"uniqueid\": \"/sensors/${1}\"
-  }")
-  ${ph_verbose} && echo "/sensors/${id}: CLIPTemperature ${2}" >&2
-  echo ${id}
+  _ph_sensor_clip "${1}" "${2}" "${3}" CLIPTemperature
 }
 
 # Create CLIPHumidity sensor.
 # Usage: ph_sensor_clip_humidity id name
 function ph_sensor_clip_humidity() {
-  local id="$(echo "${1}" | cut -d - -f 1)"
-  ph_delete "/sensors/${1}"
-  id=$(ph_post "/sensors" "{
-    \"name\": \"${2}\",
-    \"type\": \"CLIPHumidity\",
-    \"modelid\": \"CLIPHumidity\",
-    \"manufacturername\": \"homebridge-hue\",
-    \"swversion\": \"0\",
-    \"uniqueid\": \"/sensors/${1}\"
-  }")
-  ${ph_verbose} && echo "/sensors/${id}: CLIPHumidity ${2}" >&2
-  echo ${id}
+  _ph_sensor_clip "${1}" "${2}" "${3}" CLIPHumidity
 }
 
 # Create CLIPPressure sensor.
 # Usage: ph_sensor_clip_pressure id name
 function ph_sensor_clip_pressure() {
-  local id="$(echo "${1}" | cut -d - -f 1)"
-  ph_delete "/sensors/${1}"
-  id=$(ph_post "/sensors" "{
-    \"name\": \"${2}\",
-    \"type\": \"CLIPPressure\",
-    \"modelid\": \"CLIPPressure\",
-    \"manufacturername\": \"homebridge-hue\",
-    \"swversion\": \"0\",
-    \"uniqueid\": \"/sensors/${1}\"
-  }")
-  ${ph_verbose} && echo "/sensors/${id}: CLIPPressure ${2}" >&2
-  echo ${id}
+  _ph_sensor_clip "${1}" "${2}" "${3}" CLIPPressure
 }
 
 # Create CLIPOpenClose sensor.
 # Usage: ph_sensor_clip_pressure id name
 function ph_sensor_clip_openclose() {
-  local id="$(echo "${1}" | cut -d - -f 1)"
-  ph_delete "/sensors/${1}"
-  id=$(ph_post "/sensors" "{
-    \"name\": \"${2}\",
-    \"type\": \"CLIPOpenClose\",
-    \"modelid\": \"CLIPOpenClose\",
-    \"manufacturername\": \"homebridge-hue\",
-    \"swversion\": \"0\",
-    \"uniqueid\": \"/sensors/${1}\"
-  }")
-  ${ph_verbose} && echo "/sensors/${id}: CLIPOpenClose ${2}" >&2
-  echo ${id}
+  _ph_sensor_clip "${1}" "${2}" "${3}" CLIPOpenClose
 }
 
 # ===== ZIGBEE SENSORS =========================================================
@@ -227,6 +159,7 @@ function ph_sensor_name() {
   ph_put "/sensors/${1}" "{
     \"name\": \"${2}\"
   }"
+  [ $? -ne 0 ] && return 1
   ${ph_verbose} && echo "/sensors/${id}: $(ph_get "/sensors/${1}/type") ${2}" >&2
 }
 
@@ -235,9 +168,11 @@ function ph_sensor_name() {
 # Usage: ph_sensor_presence id name [sensitivity]
 function ph_sensor_presence() {
   ph_sensor_name "${1}" "${2}"
+  [ $? -ne 0 ] && return 1
   ph_put "/sensors/${1}/config" "{
     \"sensitivity\": ${3:-2}
   }"
+  [ $? -ne 0 ] && return 1
   if [ "${_ph_model}" != "deCONZ" ] ; then
     id=$(ph_post /resourcelinks "{
       \"name\": \"${2}\",
@@ -253,6 +188,7 @@ function ph_sensor_presence() {
 # Usage: ph_sensor_lightlevel id name [tholddark tholdoffset]
 function ph_sensor_lightlevel() {
   ph_sensor_name "${1}" "${2}"
+  [ $? -ne 0 ] && return 1
   ph_put "/sensors/${1}/config" "{
     \"tholddark\": ${3:-12000},
     \"tholdoffset\": ${4:-4000}
