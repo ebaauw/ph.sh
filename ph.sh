@@ -209,7 +209,7 @@ function ph_findhost() {
   # Check whether host is a valid bridge/gateway.  Call ph_host when it is.
   # Usage: probe host
   function probe_host() {
-    _ph_host= _ph_info -n "probing ${1} ..." >&2
+    _ph_host= _ph_info -n "probing ${1} ..."
     _ph_host="${1}" ph_config >/dev/null 2>&1
     if [ $? -ne 0 ] ; then
       _ph_info -s " no bridge/gateway found"
@@ -268,7 +268,7 @@ function ph_nupnp() {
   _ph_host= _ph_debug "meethue portal command: ${cmd}"
   response=$(eval ${cmd})
   if [ $? -ne 0 ] ; then
-    _ph_host= _ph_error "meethue portal not found" >&2
+    _ph_host= _ph_error "meethue portal not found"
     return 1
   fi
   _ph_host= _ph_debug "meethue portal response: ${response}"
@@ -301,11 +301,11 @@ function ph_description {
   local response
 
   if [ -z "${_ph_host}" ] ; then
-    _ph_error "host not set - please run ph_host" >&2
+    _ph_error "host not set - please run ph_host"
     return 1
   fi
   cmd="curl -s \"http://${_ph_host}/description.xml\""
-  _ph_debug "${_ph_bridge} command: ${cmd}" >&2
+  _ph_debug "${_ph_bridge} command: ${cmd}"
   response=$(eval ${cmd})
   if [ $? -ne 0 ] ; then
     _ph_error "${_ph_bridge} ${_ph_host} not found"

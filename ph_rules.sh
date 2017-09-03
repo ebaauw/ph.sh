@@ -18,27 +18,28 @@ function ph_rule() {
   }"
   local -i id=$(ph_post "/rules" "${body}")
   if [ ${id} -eq 0 ] ; then
-    echo "/rules: error: cannot create rule ${name}" >&2
+    _ph_error "cannot create rule \"${name}\""
     json -c "${body}" >&2
     return 1
   fi
-  ${ph_verbose} && echo "/rules/${id}: info: created rule ${name}" >&2
+  _ph_info "/rules/${id}: \"${name}\""
 }
 
 # Usage: ph_rules_delete
 function ph_rules_delete() {
   local -i rule
-  local rules="$(ph_get /rules | json -al | grep /name: | cut -d / -f 2)"
+  local rules="$(ph_json_args=-al ph_get /rules | grep /name: | cut -d / -f 2)"
   local -i nrules=$(echo ${rules} | wc -w)
-  ${ph_verbose} && echo "/rules: info: deleting ${nrules} rules..." >&2
+  _ph_info "deleting ${nrules} rules..."
   for rule in ${rules}; do
     ph_delete /rules/${rule}
   done
+  [ "${_ph_model}" == "deCONZ" ] && ph_restart
 }
 
 # Usage: nrules=$(ph_rules_count)
 function ph_rules_count() {
-  local -i nrules=$(ph_get /rules | json -al | grep /name: | wc -l)
+  local -i nrules=$(ph_json_args=-al ph_get /rules | grep /name: | wc -l)
   echo ${nrules}
 }
 

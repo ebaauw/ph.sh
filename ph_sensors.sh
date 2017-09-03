@@ -36,7 +36,7 @@
 function ph_sensors_init() {
   local -i id
 
-  ph_restart
+  [ "${_ph_model}" == "deCONZ" ] && ph_restart
 
   # Clear names of existing sensors.
   for id in $(ph_json_args=-al ph_get /sensors |
@@ -78,7 +78,7 @@ function ph_sensors_cleanup() {
     ph_delete "/sensors/${id}"
     _ph_info "/sensors/${id}: deleted dummy sensor"
   done
-  ph_restart
+  [ "${_ph_model}" == "deCONZ" ] && ph_restart
 }
 
 # ===== CLIP SENSORS ===========================================================
@@ -88,7 +88,7 @@ function ph_sensors_cleanup() {
 function _ph_sensor_clip()
 {
   ph_delete "/sensors/${1}" >/dev/null 2>&1
-  ph_restart
+  [ "${_ph_model}" == "deCONZ" ] && ph_restart
   id=$(ph_post "/sensors" "{
     \"name\": \"${3}\",
     \"type\": \"${4}\",
@@ -98,7 +98,7 @@ function _ph_sensor_clip()
     \"uniqueid\": \"/sensors/${2}${2:+-}${1}\"
   }")
   [ $? -ne 0 ] && return 1
-  _ph_info "/sensors/${id}: ${4} \"${3}\"" >&2
+  _ph_info "/sensors/${id}: ${4} \"${3}\""
   [ ${id} -ne ${1} ] && _ph_warn "/sensors/${id}: not requested id ${1}"
   echo ${id}
 }
