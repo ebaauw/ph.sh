@@ -39,13 +39,13 @@ function ph_sensors_init() {
   ph_restart
 
   # Clear names of existing sensors.
-  for id in $(ph_get /sensors | json -al |
+  for id in $(ph_json_args=-al ph_get /sensors |
               grep /name: | cut -d / -f 2) ; do
     [ "${_ph_model}" != "deCONZ" -a ${id} -eq 1 ] && continue
     ph_put "/sensors/${id}" '{
       "name": "_dummy"
     }'
-    ${ph_verbose} && echo "/sensors/${id}: turned to dummy sensor" >&2
+    _ph_info "/sensors/${id}: turned to dummy sensor"
   done
 
   # Create dummy sensors for unused sensor slots.
@@ -59,24 +59,24 @@ function ph_sensors_init() {
       "uniqueid": "_dummy"
     }' 2>/dev/null)
     [ $? -eq 0 ] || break
-    ${ph_verbose} && echo "/sensors/${id}: created dummy sensor" >&2
+    _ph_info "/sensors/${id}: created dummy sensor"
   done
 
   # Delete existing Hue motion sensor resoucelinks.
-  for id in $(ph_get /resourcelinks | json -al |
+  for id in $(ph_json_args=-alph_get /resourcelinks |
               grep /classid:10010 | cut -d / -f 2) ; do
     ph_delete /resourcelinks/${id}
-    ${ph_verbose} && echo "/resourcelinks/${id}: deleted" >&2
+    _ph_info "/resourcelinks/${id}: deleted"
   done
 }
 
 # Remove dummy sensors.
 function ph_sensors_cleanup() {
   local -i id
-  for id in $(ph_get /sensors | json -al |
+  for id in $(ph_json_args=-al ph_get /sensors |
               grep /name:\"_dummy\" | cut -d / -f 2) ; do
     ph_delete "/sensors/${id}"
-    ${ph_verbose} && echo "/sensors/${id}: deleted dummy sensor" >&2
+    _ph_info "/sensors/${id}: deleted dummy sensor"
   done
   ph_restart
 }
@@ -98,8 +98,8 @@ function _ph_sensor_clip()
     \"uniqueid\": \"/sensors/${2}${2:+-}${1}\"
   }")
   [ $? -ne 0 ] && return 1
-  ${ph_verbose} && echo "/sensors/${id}: ${4} ${3}" >&2
-  [ ${id} -ne ${1} ] && echo "/sensors/${id}: warning: requested id ${1}" >&2
+  _ph_info "/sensors/${id}: ${4} \"${3}\"" >&2
+  [ ${id} -ne ${1} ] && _ph_warn "/sensors/${id}: not requested id ${1}"
   echo ${id}
 }
 
@@ -116,7 +116,7 @@ function ph_sensor_clip_status() {
 }
 
 # Create CLIPPresence sensor.
-# Usage: ph_sensor_clip_presence id mid ame
+# Usage: ph_sensor_clip_presence id mid name
 function ph_sensor_clip_presence() {
   _ph_sensor_clip "${1}" "${2}" "${3}" CLIPPresence
 }
@@ -159,8 +159,9 @@ function ph_sensor_name() {
   ph_put "/sensors/${1}" "{
     \"name\": \"${2}\"
   }"
-  [ $? -ne 0 ] && return 1
-  ${ph_verbose} && echo "/sensors/${id}: $(ph_get "/sensors/${1}/type") ${2}" >&2
+  [ $? -eq 0 ] || return 1
+  local type="$(ph_unquote "$(ph_get "/sensors/${1}/type")")"
+  _ph_info "/sensors/${id}: ${type} \"${2}\""
 }
 
 # Set Hue Motion presence sensor name, sensitivity, and resourcelink.
@@ -172,7 +173,7 @@ function ph_sensor_presence() {
   ph_put "/sensors/${1}/config" "{
     \"sensitivity\": ${3:-2}
   }"
-  [ $? -ne 0 ] && return 1
+  [ $? -eq 0 ] || return 1
   if [ "${_ph_model}" != "deCONZ" ] ; then
     id=$(ph_post /resourcelinks "{
       \"name\": \"${2}\",
@@ -180,7 +181,7 @@ function ph_sensor_presence() {
       \"classid\": 10010,
       \"links\": [ \"/sensors/${1}\" ]
     }")
-    ${ph_verbose} && echo "/resourcelinks/${id}: ${2}" >&2
+    _ph_info "/resourcelinks/${id}: ${2}"
   fi
 }
 
@@ -188,7 +189,7 @@ function ph_sensor_presence() {
 # Usage: ph_sensor_lightlevel id name [tholddark tholdoffset]
 function ph_sensor_lightlevel() {
   ph_sensor_name "${1}" "${2}"
-  [ $? -ne 0 ] && return 1
+  [ $? -eq 0 ] || return 1
   ph_put "/sensors/${1}/config" "{
     \"tholddark\": ${3:-12000},
     \"tholdoffset\": ${4:-4000}

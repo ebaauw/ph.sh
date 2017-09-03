@@ -68,7 +68,7 @@ function ph_get() {
   fi
   response=$(echo "${response}" | json ${ph_json_args} -p "${path}")
   if [ -z "${response}" ] ; then
-    echo "error: '/${path}' not found in resource '/${resource}'" >&2
+    _ph_error "'/${path}' not found in resource '/${resource}'"
     return 1
   fi
   echo "${response}"
@@ -87,6 +87,11 @@ function ph_put() {
 # Usage: ph_patch resource body
 function ph_patch() {
   local response
+
+  if [ "${_ph_model}" != "deCONZ" ] ; then
+    _ph_error "patch not supported on ${_ph_model} ${_ph_bridge}"
+    return 1
+  fi
 
   response=$(_ph_http PATCH "${1}" "${2}")
   [ $? -eq 0 ] || return 1
@@ -127,6 +132,10 @@ ph_ct_energize=156      # 6,410 Kelvin
 # Press bridge link button (Philips Hue bridge only).
 # Usage: ph_linkbutton
 function ph_linkbutton() {
+  if [ "${_ph_model}" == "deCONZ" ] ; then
+    _ph_error "linkbutton not supported on ${_ph_model} ${_ph_bridge}"
+    return 1
+  fi
   ph_put /config '{"linkbutton": true}'
 }
 
@@ -139,32 +148,40 @@ function ph_createuser() {
 # Perform bridge touchlink (Philips Hue bridge only).
 # Usage: ph_touchlink
 function ph_touchlink() {
+  if [ "${_ph_model}" == "deCONZ" ] ; then
+    _ph_error "touchlink not supported on ${_ph_model} ${_ph_bridge}"
+    return 1
+  fi
   ph_put /config '{"touchlink": true}'
 }
 
 # Reset bridge homekit status (Philips Hue v2 (square) bridge only).
 # Usage: ph_reset_homekit
 function ph_reset_homekit() {
+  if [ "${_ph_model}" != "BSB002" ] ; then
+    _ph_error "touchlink not supported on ${_ph_model} ${_ph_bridge}"
+    return 1
+  fi
   ph_put /config '{"homekit":{"factoryreset": true}}'
 }
 
 # Restart the deCONZ gateway.
 # Usage: ph_restart
 function ph_restart() {
-  if [ "${_ph_model}" == "deCONZ" ] ; then
-    local response=$(ph_post /config/restartapp)
-    if [ ${response} == "true" ] ; then
-      ${ph_verbose} && echo -n "restarting deCONZ ..." >&2
-      sleep 5
-      while [ "${response}" != "\"${_ph_model}\"" ] ; do
-        ${ph_verbose} && echo -n . >&2
-        sleep 1
-        response=$(ph_get /config/modelid 2>/dev/null)
-      done
-      ${ph_verbose} && echo >&2
-    fi
+  if [ "${_ph_model}" != "deCONZ" ] ; then
+    _ph_error "restart not supported on ${_ph_model} ${_ph_bridge}"
+    return 1
   fi
-
+  local response=$(ph_post /config/restartapp)
+  if [ ${response} == "true" ] ; then
+    _ph_info -n "restarting ${_ph_model} ${_ph_bridge} "
+    while [ "${response}" != "\"${_ph_model}\"" ] ; do
+      _ph_info -n -s "."
+      sleep 1
+      response="$(ph_get /config/modelid 2>/dev/null)"
+    done
+    _ph_info -s
+  fi
 }
 
 # ===== BRIDGE DISCOVERY =======================================================
@@ -173,73 +190,70 @@ function ph_restart() {
 # Usage: ph_host [host]
 function ph_host() {
   config="$(_ph_host=${1:-${_ph_host}} ph_config)"
-  [ $? -ne 0 ]&& return 1
+  [ $? -eq 0 ] || return 1
   _ph_host=${1:-${_ph_host}}
   _ph_model="$(ph_unquote $(json -p /modelid -c "${config}"))"
-  if ${ph_verbose} ; then
-    _ph_bridge=bridge
-    local version="$(ph_unquote $(json -p /swversion -c "${config}"))"
-    local api="$(ph_unquote $(json -p /apiversion -c "${config}"))"
-
-    [ "${_ph_model}" == "deCONZ" ] && _ph_bridge=gateway
-    version="$(ph_unquote ${version})"
-    api="$(ph_unquote ${api})"
-    echo "${_ph_host}: ${_ph_model} ${_ph_bridge} v${version}, api v${api}" >&2
-  fi
-  [ -z "${1}" ] && echo "${_ph_host}"
-}
-
-# Check whether host is a valid bridge/gateway.  Call ph_host when it is.
-# Usage: _ph_probe host
-function _ph_probe_host() {
-  ${ph_verbose} && echo -n "probing ${1}... " >&2
-  _ph_host="${1}" ph_config >/dev/null 2>&1
-  if [ $? -ne 0 ] ; then
-    ${ph_verbose} && echo "no bridge/gateway found"
-    return 1
-  fi
-  ${ph_verbose} && echo "ok"
-  ph_host "${1}"
-  return 0
-}
-
-# Check whether (one of) the bridge(s)/gateway(s) return by the portal is a
-# valid bridge/gateway.
-# Usage: _ph_probe_hosts response
-function _ph_probe_hosts() {
-  local i=0
-  local host=$(ph_unquote "$(json -avc "${1}" -p /${i}/internalipaddress)")
-  while [ ! -z "${host}" ] ; do
-    local -i port=$(json -avc "${1}" -p /${i}/internalport)
-    [ "${port}" -eq 0 -o ${port} -eq 80 ] || host="${host}:${port}"
-    _ph_probe_host "${host}"
-    [ $? -eq 0 ] && return 0
-    i=$((i + 1))
-    host=$(ph_unquote "$(json -avc "${1}" -p /${i}/internalipaddress)")
-  done
-  return 1
+  _ph_bridge=bridge
+  local version="$(ph_unquote $(json -p /swversion -c "${config}"))"
+  local api="$(ph_unquote $(json -p /apiversion -c "${config}"))"
+  [ "${_ph_model}" == "deCONZ" ] && _ph_bridge=gateway
+  version="$(ph_unquote ${version})"
+  api="$(ph_unquote ${api})"
+  _ph_info "${_ph_model} ${_ph_bridge} v${version}, api v${api}"
+  [ -z "${1}" ] && echo "\"${_ph_host}\""
 }
 
 # Find a bridge/gateway.
-# Usage: ph_host="$(ph_findhost [host[:port])"
+# Usage: ph_findhost
 function ph_findhost() {
+  # Check whether host is a valid bridge/gateway.  Call ph_host when it is.
+  # Usage: probe host
+  function probe_host() {
+    _ph_host= _ph_info -n "probing ${1} ..." >&2
+    _ph_host="${1}" ph_config >/dev/null 2>&1
+    if [ $? -ne 0 ] ; then
+      _ph_info -s " no bridge/gateway found"
+      return 1
+    fi
+    _ph_info -s " ok"
+    ph_host "${1}"
+    return 0
+  }
+
+  # Check whether (one of) the bridge(s)/gateway(s) return by the portal is a
+  # valid bridge/gateway.
+  # Usage: probe_hosts response
+  function probe_hosts() {
+    local i=0
+    local host="$(ph_unquote "$(json -avc "${1}" -p /${i}/internalipaddress)")"
+    while [ ! -z "${host}" ] ; do
+      local -i port="$(json -avc "${1}" -p /${i}/internalport)"
+      [ ${port} -eq 0 -o ${port} -eq 80 ] || host="${host}:${port}"
+      probe_host "${host}"
+      [ $? -eq 0 ] && return 0
+      i=$((i + 1))
+      host="$(ph_unquote "$(json -avc "${1}" -p /${i}/internalipaddress)")"
+    done
+    return 1
+  }
+
   # Try localhost.
-  _ph_probe_host localhost
+  probe_host localhost
   [ $? -eq 0 ] && return 0
 
   # Try meethue portal.
-  ${ph_verbose} && echo "contacting meethue portal..." >&2
-  _ph_probe_hosts "$(ph_nupnp)"
+  _ph_host= _ph_info "contacting meethue portal ..."
+  probe_hosts "$(ph_nupnp)"
   [ $? -eq 0 ] && return 0
 
   # Try deCONZ portal over IPv4.
-  ${ph_verbose} && echo "contacting deCONZ portal over IPv4..." >&2
-  _ph_probe_hosts "$(ph_nupnp_deconz -4)"
+  _ph_host= _ph_info "contacting deCONZ portal over IPv4 ..."
+  probe_hosts "$(ph_nupnp_deconz -4)"
   [ $? -eq 0 ] && return 0
 
   # Try deCONZ portal over IPv6.
-  ${ph_verbose} && echo "contacting deCONZ portal over IPv6..." >&2
-  _ph_probe_hosts "$(ph_nupnp_deconz -6)"
+  _ph_host= _ph_info "contacting deCONZ portal over IPv6 ..."
+  probe_hosts "$(ph_nupnp_deconz -6)"
   [ $? -eq 0 ] && return 0
 }
 
@@ -251,13 +265,13 @@ function ph_nupnp() {
 
   cmd="curl -s -H \"Content-Type: application/json\""
   cmd="${cmd} \"https://www.meethue.com/api/nupnp\""
-  ${ph_debug} && echo "debug: meethue portal command: ${cmd}" >&2
+  _ph_host= _ph_debug "meethue portal command: ${cmd}"
   response=$(eval ${cmd})
   if [ $? -ne 0 ] ; then
-    echo "error: meethue portal not found" >&2
+    _ph_host= _ph_error "meethue portal not found" >&2
     return 1
   fi
-  ${ph_debug} && echo "debug: meethue portal response: ${response}" >&2
+  _ph_host= _ph_debug "meethue portal response: ${response}"
   json ${ph_json_args} -c "${response}"
 }
 
@@ -270,13 +284,13 @@ function ph_nupnp_deconz() {
   cmd="curl -s -H \"Content-Type: application/json\""
   [ "${1}" == "-4" -o "${1}" == "-6" ] && cmd="${cmd} ${1}"
   cmd="${cmd} \"https://dresden-light.appspot.com/discover\""
-  ${ph_debug} && echo "debug: deCONZ portal command: ${cmd}" >&2
+  _ph_host= _ph_debug "deCONZ portal command: ${cmd}"
   response=$(eval ${cmd})
   if [ $? -ne 0 ] ; then
-    echo "error: deCONZ portal not found" >&2
+    _ph_host= _ph_error "deCONZ portal not found"
     return 1
   fi
-  ${ph_debug} && echo "debug: deCONZ portal response: ${response}" >&2
+  _ph_host= _ph_debug "deCONZ portal response: ${response}"
   json ${ph_json_args} -c "${response}"
 }
 
@@ -287,17 +301,17 @@ function ph_description {
   local response
 
   if [ -z "${_ph_host}" ] ; then
-    echo "error: host not set - please run ph_host" >&2
+    _ph_error "host not set - please run ph_host" >&2
     return 1
   fi
   cmd="curl -s \"http://${_ph_host}/description.xml\""
-  ${ph_debug} && echo "debug: ${_ph_bridge} command: ${cmd}" >&2
+  _ph_debug "${_ph_bridge} command: ${cmd}" >&2
   response=$(eval ${cmd})
   if [ $? -ne 0 ] ; then
-    echo "error: ${_ph_bridge} ${_ph_host} not found" >&2
+    _ph_error "${_ph_bridge} ${_ph_host} not found"
     return 1
   fi
-  ${ph_debug} && echo "debug: ${_ph_bridge} response: ${response}" >&2
+  _ph_debug "${_ph_bridge} response: ${response}"
   echo "${response}"
 }
 
@@ -312,24 +326,23 @@ function ph_config() {
 # Discover values for ct and xy supported by light.
 # Usage: ph_light_values id
 function ph_light_values() {
-  local light=/lights/${1}
-  local state=${light}/state
+  local light="/lights/${1}"
+  local state="${light}/state"
   local response
-  response=$(ph_get /lights/${1})
-  if [ $? -ne 0 ] ; then
-    return 1
-  fi
+  response=$(ph_get "/lights/${1}")
+  [ $? -eq 0 ] || return 1
+
   local manufacturer="$(json -c "${response}" -p /manufacturername)"
   [ -z "${manufacturer}" ] && manufacturer="$(json -c "${response}" -p /manufacturer)"
-  local model="$(json -c "${response}" -p /modelid)"
-  local ltype="$(json -c "${response}" -p /type)"
+  manufacturer="$(ph_unquote "${manufacturer}")"
+  local model="$(ph_unquote "$(json -c "${response}" -p /modelid)")"
+  local ltype="$(ph_unquote "$(json -c "${response}" -p /type)")"
   local name="$(json -c "${response}" -p /name)"
-  local on="$(json -c "${response}" -p /state/on)"
   local bri="$(json -c "${response}" -p /state/bri)"
   local ct="$(json -c "${response}" -p /state/ct)"
-  local xy="$(json -c "${response}" -p /state/xy)"
+  local xy="$(json -nc "${response}" -p /state/xy)"
 
-  ${ph_verbose} && echo "${light}: $(ph_unquote "${manufacturer}") $(ph_unquote "${model}") ($(ph_unquote "${ltype}")) ${name}" >&2
+  _ph_info "${light}: ${manufacturer} ${model} ${ltype} ${name}"
 
   local ct
   local ct_min
@@ -342,64 +355,63 @@ function ph_light_values() {
   local -i max=0
   local zero="0.0000"
   local one="1.0000"
-  if [ "$(ph_get /config/modelid)" == '"deCONZ"' ] ; then
+  if [ "${_ph_model}" == "deCONZ" ] ; then
     max=60
     zero="0"
     one="1"
   fi
 
   function ct_value() {
-    ${ph_verbose} && echo -n "${light}: ct: ${1} .." >&2
-    ph_put ${state} "{\"ct\":${2}}"
-    ct=$(ph_get ${state}/ct | json -n)
+    _ph_info -n "${light}: ct: ${1} .."
+    ph_put "${state}" "{\"ct\":${2}}"
+    ct=$(ph_get "${state}/ct")
     local -i n=0
     while [ "${ct}" == "${2}" -a ${n} -le ${max} ] ; do
-      ${ph_verbose} && echo -n . >&2
+      _ph_info -n -s .
       sleep 5
-      ct=$(ph_get ${state}/ct | json -n)
+      ct=$(ph_get "${state}/ct")
       n=$((n + 1))
     done
-    ${ph_verbose} && echo " ${ct}" >&2
+    _ph_info -s " ${ct}"
   }
 
-  # analyse_xy colour xy
   function xy_value() {
-    ${ph_verbose} && echo -n "${light}: xy: ${1} .." >&2
-    ph_put ${state} "{\"xy\":${2}}"
-    xy=$(ph_get ${state}/xy | json -n)
+    _ph_info -n "${light}: xy: ${1} .."
+    ph_put "${state}" "{\"xy\":${2}}"
+    xy=$(ph_json_args=-n ph_get "${state}/xy")
     while [ "${xy}" == "${2}" ] ; do
-      ${ph_verbose} && echo -n . >&2
+      _ph_info -n -s .
       sleep 5
-      xy=$(ph_get ${state}/xy | json -n)
+      xy=$(ph_json_args=-n ph_get "${state}/xy")
     done
-    ${ph_verbose} && echo " ${xy}" >&2
+    _ph_info -s " ${xy}"
   }
 
-  ph_put ${state} '{"on":true}'
+  ph_put "${state}" '{"on":true}'
 
   if [ ! -z "${ct}" ] ; then
     ct_value cool 153
-    ct_min=${ct}
+    ct_min="${ct}"
     ct_value warm 500
-    ct_max=${ct}
+    ct_max="${ct}"
   fi
 
   if [ ! -z "${xy}" ] ; then
     xy_value red "[${one},${zero}]"
-    xy_red=${xy}
+    xy_red="${xy}"
     xy_value green "[${zero},${one}]"
-    xy_green=${xy}
+    xy_green="${xy}"
     xy_value blue "[${zero},${zero}]"
-    xy_blue=${xy}
+    xy_blue="${xy}"
   fi
 
-  ph_put ${state} '{"on":false}'
-  ${ph_verbose} && echo "${light}: done"
+  ph_put "${state}" '{"on":false}'
+  _ph_info "${light}: done"
 
   local s="{"
-  s="${s}\"manufacturer\": ${manufacturer}"
-  s="${s},\"modelid\": ${model}"
-  s="${s},\"type\": ${ltype}"
+  s="${s}\"manufacturer\": \"${manufacturer}\""
+  s="${s},\"modelid\": \"${model}\""
+  s="${s},\"type\": \"${ltype}\""
   if [ ! -z "${bri}" ] ; then
     s="${s},\"bri\":true"
   fi
@@ -441,7 +453,7 @@ function _ph_http() {
       else
         data=$(json -nc "${3}" 2>/dev/null)
         if [[ $? -ne 0 || "${data}" != {*} ]] ; then
-          echo "error: invalid body '${3}'" >&2
+          _ph_error "invalid body '${3}'"
           return 1
         fi
         data=" -d '${3}'"
@@ -452,16 +464,16 @@ function _ph_http() {
       data=
       ;;
     *)
-      echo "error: invalid method '${1}'" >&2
+      _ph_error "invalid method '${1}'"
       return 1
       ;;
   esac
   if [[ "${2}" != /* ]] ; then
-    echo "error: invalid resource '${2}'" >&2
+    _ph_error "invalid resource '${2}'"
     return 1
   fi
   if [ "${ph_username}" == empty ] ; then
-    echo "error: ph_username not set" >&2
+    _ph_error "ph_username not set"
     return 1
   elif [ -z "${ph_username}" ] ; then
     resource="/api${2}"
@@ -469,34 +481,34 @@ function _ph_http() {
     resource="/api/${ph_username}${2}"
   fi
   if [ -z "${_ph_host}" ] ; then
-    echo "error: host not set - please run ph_host" >&2
+    _ph_error "host not set - please run ph_host"
     return 1
   fi
 
   # Send HTTP request to the Hue bridge.
   cmd="curl -s${method} -H \"Content-Type: application/json\"${data}"
   cmd="${cmd} \"http://${_ph_host}${resource}\""
-  ${ph_debug} && echo "debug: ${_ph_bridge} command: ${cmd}" >&2
+  _ph_debug "${_ph_bridge} command: ${cmd}"
   response=$(eval ${cmd})
   if [ $? -ne 0 ] ; then
-    echo "error: ${_ph_host}: not found" >&2
+    _ph_error "${_ph_bridge} not found"
     return 1
   fi
-  ${ph_debug} && echo "debug: ${_ph_bridge} response: ${response}" >&2
+  _ph_debug "${_ph_bridge} response: ${response}"
 
   # Check response for errors.
   responselines=$(echo "${response}" | json -al 2>/dev/null)
   if [ $? -ne 0 -o "${response}" == '[]' ] ; then
-    echo "error: invalid method ${1} for resource ${2}" >&2
+    _ph_error "invalid method ${1} for resource ${2}"
     return 1
   fi
   errorlines=$(echo "${responselines}" | grep /error/type: | cut -d / -f 2)
   if [ ! -z "${errorlines}" ] ; then
     for i in ${errorlines} ; do
-      local -i errno=$(json -avp /${i}/error/type -c "${response}")
-      local error=$(json -avp /${i}/error/description -c "${response}")
-      error=$(ph_unquote "${error}")
-      echo "error: ${_ph_bridge} error ${errno}: ${error}" >&2
+      local -i errno="$(json -avp /${i}/error/type -c "${response}")"
+      local error="$(json -avp /${i}/error/description -c "${response}")"
+      error="$(ph_unquote "${error}")"
+      _ph_error "${_ph_bridge} error ${errno}: ${error}"
     done
     return 1
   fi
@@ -515,4 +527,45 @@ function ph_quote() {
 # Usage: s=$(ph_unquote string)
 function ph_unquote() {
   [[ "${1}" == '"'*'"' ]] && eval echo "${1}" || echo "${1}"
+}
+
+# Issue message on standard error
+# Usage: _ph_msg severity [-n] [-s] message...
+function _ph_msg() {
+  local start="${_ph_host:-ph.sh}: ${1}${1:+: }"
+  local nflag=
+  shift
+  if [ "${1}" == "-n" ] ; then
+    nflag="-n"
+    shift
+  fi
+  if [ "${1}" == "-s" ] ; then
+    start=
+    shift
+  fi
+  echo ${nflag} "${start}${*}" >&2
+}
+
+# Issue error message
+# Usage: _ph_error [-n|-s] message...
+function _ph_error() {
+  _ph_msg error "${@}"
+}
+
+# Issue warning message
+# Usage: _ph_warn [-n|-s] message...
+function _ph_warn() {
+  _ph_msg warning "${@}"
+}
+
+# Issue info message when ${ph_verbose} true
+# Usage: _ph_info [-n|-s] message...
+function _ph_info() {
+  ${ph_verbose} && _ph_msg "" "${@}"
+}
+
+# Issue debug message when ${ph_debug} is true
+# Usage: _ph_debug [-n|-s] message...
+function _ph_debug() {
+  ${ph_debug} && _ph_msg debug "${@}"
 }

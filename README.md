@@ -32,27 +32,28 @@ Command | Description
 
 These commands depend on `curl`, to send HTTP requests to the bridge, and on `json`, to format the bridge responses into human readable or machine readable output.  A `bash` implementation of `json` is provided by `json.sh`.  See `json -h` for its usage.
 
-### Configuation
+### Configuration
 The following shell variables are used by `ph.sh`:
 
 Variable | Default | Description
 -------- | -------| -----------
 `ph_host` | -- | Deprecated. <br>Use the `ph_host` command to set the host (and port) of the bridge/gateway.
 `ph_username` | _empty_ | The username on the bridge used to authenticate requests. <br>You can create a username using `ph_createuser`.
-`ph_json_args` | _empty_ | Arguments to pass to `json` when formatting output.
+`ph_json_args` | _empty_ | Arguments to pass to `json` when formatting the output of `ph_get`, `ph_nupnp`, or `ph_nupnp_deconz`.
 `ph_verbose` | `false` | When set to `true`, issue info messages to standard error.
-`ph_debug` | `false` | When set to `true`, issue debug messages to standard error for requests sent to and responses received from the bridge/gateway.
+`ph_debug` | `false` | When set to `true`, issue debug messages to standard error for requests sent to and responses received from the bridge/gateway, the meethue portal, and the deCONZ portal.
 
 ### Installation
 To install, take the following steps:
 - Copy `ph.sh` and `json.sh` to a directory in your `$PATH`, e.g. `~/bin` or `/usr/local/bin`;
 - Load the commands by issuing `. ph.sh` from the command line;
-- Run `ph_findhost` from the command line to find your bridge/gateway.  Alternatively run `ph_host` to set manually the hostname or ip address (and port) of the bridge/gateway to use;
+- Run `ph_findhost` from the command line to find your bridge/gateway.  Alternatively run `ph_host` to set manually the hostname or IP address (and port) of the bridge/gateway to use;
 - Create a username by issuing `ph_createuser` from the command line;
 - Include the following lines in your `.bashrc`:
 ```sh
-ph_username=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 . ph.sh
+ph_findhost
+ph_username=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ### Caveats
@@ -63,6 +64,28 @@ While functional, the `bash` implementation of `json` is not very efficient, esp
 ### Examples
 Here are some examples how to use interactively the commands provided by `ph.sh`:
 
+- Find the bridge/gateway:
+  ```bash
+  ph_findhost
+  ```
+  Set `ph_verbose` to `true` to see the progress on the standard error:
+  ```bash
+  ph_verbose=true ph_findhost
+  ```
+  ```
+  ph.sh: probing localhost ... no bridge/gateway found
+  ph.sh: contacting meethue portal ...
+  ph.sh: probing 192.168.xxx.xxx ... ok
+  192.168.xxx.xxx: BSB002 bridge v1707040932, api v1.20.0
+  ```
+- Check which bridge/gateway was found:
+  ```bash
+  ph_host
+  ```
+  The output is the IP address of the bridge/gateway:
+  ```json
+  "192.168.xxx.xxx"
+  ```
 - Create a username and store it in the `ph_username` variable:
   ```bash
   ph_username=$(ph_createuser)
@@ -170,9 +193,13 @@ Here are some examples how to use the commands provided by `ph.sh` in scripting:
   /colormode:"xy"
   /reachable:true
   ```
+  However `ph_get` already runs `json` to format the bridge output.  It's more efficient to pass the `-al` trough `ph_get` and only run `json` once:
+  ```bash
+  ph_json_args=-al ph_get /lights/1/state
+  ```
 - Check for non-reachable lights
   ```bash
-  ph_get /lights | json -al | grep /reachable:false | cut -d / -f 2
+  ph_json_args=-al ph_get /lights | grep /reachable:false | cut -d / -f 2
   ```
   The output contains the ids of the lights for which the `state.reachable` attribute is `false`:
   ```json
@@ -181,14 +208,14 @@ Here are some examples how to use the commands provided by `ph.sh` in scripting:
   ```
   To see the names of these lights rather than their numbers, use:
   ```bash
-  for light in $(ph_get /lights | json -al | grep /reachable:false | cut -d / -f 2) ; do
+  for light in $(ph_json_args=-al ph_get /lights | grep /reachable:false | cut -d / -f 2) ; do
     ph_get /lights/${light}/name
   done
   ```
 - Delete the rules created by the Philips Hue app:
   ```bash
-  for user in $(ph_get /config/whitelist | json -al | grep /name:\"hue_ios_app# | cut -d / -f 2) ; do
-    for rule in $(ph_get /rules | json -al | grep "/owner:\"${user}\"" | cut -d / -f 2) ; do
+  for user in $(ph_json_args=-al ph_get /config/whitelist | grep /name:\"hue_ios_app# | cut -d / -f 2) ; do
+    for rule in $(ph_json_args=-al ph_get /rules | grep "/owner:\"${user}\"" | cut -d / -f 2) ; do
       ph_delete "/rules/${rule}"
     done
   done
