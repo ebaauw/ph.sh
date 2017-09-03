@@ -10,9 +10,17 @@
 # - Philips Hue v1 (round) brudge;
 # - dresden elektronik deCONZ REST API plugin.
 
+# ===== CONFIGURATION ==========================================================
+
 # Check whether json command is available, otherwise load json.sh.
 json -c 0 >/dev/null 2>&1
 [ $? -eq 0 ] || . json.sh
+
+# Set default values.
+: ${ph_username:=empty}
+: ${ph_verbose:=false}
+: ${ph_debug:=false}
+: ${ph_json_args:=""}
 
 # ===== BASIC FUNCTIONS ========================================================
 
@@ -148,23 +156,78 @@ function ph_restart() {
 
 # ===== BRIDGE DISCOVERY =======================================================
 
-# Find a bridge.
-# Usage: ph_host="$(ph_findhost)"
+# Set ${_ph_host} and ${_ph_model} for bridge/gateway at host.
+# Usage: ph_host [host]
+function ph_host() {
+  config="$(_ph_host=${1:-${_ph_host}} ph_config)"
+  [ $? -ne 0 ]&& return 1
+  _ph_host=${1:-${_ph_host}}
+  _ph_model="$(ph_unquote $(json -p /modelid -c "${config}"))"
+  if ${ph_verbose} ; then
+    _ph_bridge=bridge
+    local version="$(ph_unquote $(json -p /swversion -c "${config}"))"
+    local api="$(ph_unquote $(json -p /apiversion -c "${config}"))"
+
+    [ "${_ph_model}" == "deCONZ" ] && _ph_bridge=gateway
+    version="$(ph_unquote ${version})"
+    api="$(ph_unquote ${api})"
+    echo "${_ph_host}: ${_ph_model} ${_ph_bridge} v${version}, api v${api}" >&2
+  fi
+  [ -z "${1}" ] && echo "${_ph_host}"
+}
+
+# Check whether host is a valid bridge/gateway.  Call ph_host when it is.
+# Usage: _ph_probe host
+function _ph_probe_host() {
+  ${ph_verbose} && echo -n "probing ${1}... " >&2
+  _ph_host="${1}" ph_config >/dev/null 2>&1
+  if [ $? -ne 0 ] ; then
+    ${ph_verbose} && echo "no bridge/gateway found"
+    return 1
+  fi
+  ${ph_verbose} && echo "ok"
+  ph_host "${1}"
+  return 0
+}
+
+# Check whether (one of) the bridge(s)/gateway(s) return by the portal is a
+# valid bridge/gateway.
+# Usage: _ph_probe_hosts response
+function _ph_probe_hosts() {
+  local i=0
+  local host=$(ph_unquote "$(json -avc "${1}" -p /${i}/internalipaddress)")
+  while [ ! -z "${host}" ] ; do
+    local -i port=$(json -avc "${1}" -p /${i}/internalport)
+    [ "${port}" -eq 0 -o ${port} -eq 80 ] || host="${host}:${port}"
+    _ph_probe_host "${host}"
+    [ $? -eq 0 ] && return 0
+    i=$((i + 1))
+    host=$(ph_unquote "$(json -avc "${1}" -p /${i}/internalipaddress)")
+  done
+  return 1
+}
+
+# Find a bridge/gateway.
+# Usage: ph_host="$(ph_findhost [host[:port])"
 function ph_findhost() {
-  local host
-  host=$(ph_unquote "$(ph_nupnp | json -avp /0/internalipaddress)")
-  if [ ! -z "${host}" ] ; then
-    echo "${host}"
-    return 0
-  fi
-  local response="$(ph_nupnp_deconz)"
-  host=$(ph_unquote "$(json -avc "${response}" -p /0/internalipaddress)")
-  if [ ! -z "${host}" ] ; then
-    local -i port=$(json -avc "${response}" -p /0/internalport)
-    [ ${port} -eq 80 ] || host="${host}:${port}"
-    echo ${host}
-    return 0
-  fi
+  # Try localhost.
+  _ph_probe_host localhost
+  [ $? -eq 0 ] && return 0
+
+  # Try meethue portal.
+  ${ph_verbose} && echo "contacting meethue portal..." >&2
+  _ph_probe_hosts "$(ph_nupnp)"
+  [ $? -eq 0 ] && return 0
+
+  # Try deCONZ portal over IPv4.
+  ${ph_verbose} && echo "contacting deCONZ portal over IPv4..." >&2
+  _ph_probe_hosts "$(ph_nupnp_deconz -4)"
+  [ $? -eq 0 ] && return 0
+
+  # Try deCONZ portal over IPv6.
+  ${ph_verbose} && echo "contacting deCONZ portal over IPv6..." >&2
+  _ph_probe_hosts "$(ph_nupnp_deconz -6)"
+  [ $? -eq 0 ] && return 0
 }
 
 # Find Philips Hue bridges through the meethue portal (nupnp method).
@@ -210,14 +273,18 @@ function ph_description {
   local cmd
   local response
 
-  cmd="curl -s \"http://${ph_host}/description.xml\""
-  ${ph_debug} && echo "debug: hue bridge command: ${cmd}" >&2
-  response=$(eval ${cmd})
-  if [ $? -ne 0 ] ; then
-    echo "error: hue bridge not found" >&2
+  if [ -z "${_ph_host}" ] ; then
+    echo "error: host not set - please run ph_host" >&2
     return 1
   fi
-  ${ph_debug} && echo "debug: hue bridge response: ${response}" >&2
+  cmd="curl -s \"http://${_ph_host}/description.xml\""
+  ${ph_debug} && echo "debug: ${_ph_bridge} command: ${cmd}" >&2
+  response=$(eval ${cmd})
+  if [ $? -ne 0 ] ; then
+    echo "error: ${_ph_bridge} ${_ph_host} not found" >&2
+    return 1
+  fi
+  ${ph_debug} && echo "debug: ${_ph_bridge} response: ${response}" >&2
   echo "${response}"
 }
 
@@ -388,21 +455,21 @@ function _ph_http() {
   else
     resource="/api/${ph_username}${2}"
   fi
-  if [ -z "${ph_host}" ] ; then
-    echo "error: ph_host not set" >&2
+  if [ -z "${_ph_host}" ] ; then
+    echo "error: host not set - please run ph_host" >&2
     return 1
   fi
 
   # Send HTTP request to the Hue bridge.
   cmd="curl -s${method} -H \"Content-Type: application/json\"${data}"
-  cmd="${cmd} \"http://${ph_host}${resource}\""
-  ${ph_debug} && echo "debug: hue bridge command: ${cmd}" >&2
+  cmd="${cmd} \"http://${_ph_host}${resource}\""
+  ${ph_debug} && echo "debug: ${_ph_bridge} command: ${cmd}" >&2
   response=$(eval ${cmd})
   if [ $? -ne 0 ] ; then
-    echo "error: hue bridge '${ph_host}' not found" >&2
+    echo "error: ${_ph_host}: not found" >&2
     return 1
   fi
-  ${ph_debug} && echo "debug: hue bridge response: ${response}" >&2
+  ${ph_debug} && echo "debug: ${_ph_bridge} response: ${response}" >&2
 
   # Check response for errors.
   responselines=$(json -al -c "${response}" 2>/dev/null)
@@ -416,7 +483,7 @@ function _ph_http() {
       local -i errno=$(json -avp /${i}/error/type -c "${response}")
       local error=$(json -avp /${i}/error/description -c "${response}")
       error=$(ph_unquote "${error}")
-      echo "error: hue bridge error ${errno}: ${error}" >&2
+      echo "error: ${_ph_bridge} error ${errno}: ${error}" >&2
     done
     return 1
   fi
@@ -436,13 +503,3 @@ function ph_quote() {
 function ph_unquote() {
   [[ "${1}" == '"'*'"' ]] && eval echo "${1}" || echo "${1}"
 }
-
-# ===== CONFIGURATION ==========================================================
-
-# Set default values.
-: ${ph_host:=$(ph_findhost)}
-: ${ph_host:="127.0.0.1"}
-: ${ph_username:=empty}
-: ${ph_verbose:=false}
-: ${ph_debug:=false}
-: ${ph_json_args:=""}
