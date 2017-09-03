@@ -63,10 +63,10 @@ function ph_get() {
   response=$(_ph_http GET "/${resource}")
   [ $? -eq 0 ] || return 1
   if [ -z "${path}" ] ; then
-    json ${ph_json_args} -c "${response}"
+    echo "${response}" | json ${ph_json_args}
     return 0
   fi
-  response=$(json ${ph_json_args} -c "${response}" -p "${path}")
+  response=$(echo "${response}" | json ${ph_json_args} -p "${path}")
   if [ -z "${response}" ] ; then
     echo "error: '/${path}' not found in resource '/${resource}'" >&2
     return 1
@@ -151,7 +151,20 @@ function ph_reset_homekit() {
 # Restart the deCONZ gateway.
 # Usage: ph_restart
 function ph_restart() {
-  ph_post /config/restartapp
+  if [ "${_ph_model}" == "deCONZ" ] ; then
+    local response=$(ph_post /config/restartapp)
+    if [ ${response} == "true" ] ; then
+      ${ph_verbose} && echo -n "restarting deCONZ ..." >&2
+      sleep 5
+      while [ "${response}" != "\"${_ph_model}\"" ] ; do
+        ${ph_verbose} && echo -n . >&2
+        sleep 1
+        response=$(ph_get /config/modelid 2>/dev/null)
+      done
+      ${ph_verbose} && echo >&2
+    fi
+  fi
+
 }
 
 # ===== BRIDGE DISCOVERY =======================================================
@@ -472,7 +485,7 @@ function _ph_http() {
   ${ph_debug} && echo "debug: ${_ph_bridge} response: ${response}" >&2
 
   # Check response for errors.
-  responselines=$(json -al -c "${response}" 2>/dev/null)
+  responselines=$(echo "${response}" | json -al 2>/dev/null)
   if [ $? -ne 0 -o "${response}" == '[]' ] ; then
     echo "error: invalid method ${1} for resource ${2}" >&2
     return 1
