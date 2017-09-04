@@ -109,7 +109,10 @@ function _ph_sensor_clip()
 # Create CLIPGenericFlag sensor.
 # Usage: id=$(ph_sensor_clip_flag id mid name [readonly])
 function ph_sensor_clip_flag() {
-  _ph_sensor_clip "${1}" "${2}" "${3}" CLIPGenericFlag "${4:+1}"
+  local version=1
+
+  [ -z "${4}" ] || version=0
+  _ph_sensor_clip "${1}" "${2}" "${3}" CLIPGenericFlag "${version}"
 }
 
 # Create CLIPGenericStatus sensor.
