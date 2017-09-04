@@ -73,6 +73,7 @@ function ph_sensors_init() {
 # Remove dummy sensors.
 function ph_sensors_cleanup() {
   local -i id
+
   for id in $(ph_json_args=-al ph_get /sensors |
               grep /name:\"_dummy\" | cut -d / -f 2) ; do
     ph_delete "/sensors/${id}"
@@ -87,6 +88,8 @@ function ph_sensors_cleanup() {
 # Usage: id=$(_ph_sensor_clip id mid name type [swversion])
 function _ph_sensor_clip()
 {
+  local -i id
+
   ph_delete "/sensors/${1}" >/dev/null 2>&1
   [ "${_ph_model}" == "deCONZ" ] && ph_restart
   id=$(ph_post "/sensors" "{
@@ -161,13 +164,15 @@ function ph_sensor_name() {
   }"
   [ $? -eq 0 ] || return 1
   local type="$(ph_unquote "$(ph_get "/sensors/${1}/type")")"
-  _ph_info "/sensors/${id}: ${type} \"${2}\""
+  _ph_info "/sensors/${1}: ${type} \"${2}\""
 }
 
 # Set Hue Motion presence sensor name, sensitivity, and resourcelink.
 # Hue app v2 expects a resourcelink before it shows Hue Motion status.
 # Usage: ph_sensor_presence id name [sensitivity]
 function ph_sensor_presence() {
+  local -i id
+
   ph_sensor_name "${1}" "${2}"
   [ $? -ne 0 ] && return 1
   ph_put "/sensors/${1}/config" "{
