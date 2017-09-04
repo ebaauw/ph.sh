@@ -272,16 +272,16 @@ function ph_action_group_dim() {
     stop)   value=0    ; tt=0    ;;
     wakeup) value=254  ; tt=6000 ;;
   esac
-  [ -z "${ph_deconz}" ] && bri_inc=bri_inc || bri_inc=bri
+  [ "${_ph_model}" == "deCONZ" ] && bri_inc=bri || bri_inc=bri_inc
   ph_action_group_action "${1}" "{\"${bri_inc}\": ${value}, \"transitiontime\": ${tt}}"
 }
 
 # Usage: action="$(ph_action_scene group scene)"
 function ph_action_scene_recall() {
-  if [ -z "${ph_deconz}" ] ; then
-    ph_action_group_action "${1}" "{\"scene\": \"${2}\"}"
-  else
+  if [ "${_ph_model}" == "deCONZ" ] ; then
     ph_action "/groups/${1}/scenes/${2}/recall"
+  else
+    ph_action_group_action "${1}" "{\"scene\": \"${2}\"}"
   fi
 }
 
@@ -309,7 +309,20 @@ function ph_rules_night() {
   local morning="${4:-07:00:00}"
   local evening="${5:-23:30:00}"
 
-  if [ -z "${ph_deconz}" ] ; then
+  if [ "${_ph_model}" == "deCONZ" ] ; then
+    ph_rule "Daylight Off" "[
+      $(ph_condition_flag ${daylight} false)
+    ]" "[
+      $(ph_action_lightlevel ${lightlevel} 0)
+    ]"
+
+    ph_rule "Daylight On" "[
+      $(ph_condition_flag ${daylight})
+    ]" "[
+      $(ph_action_lightlevel ${lightlevel} 40000),
+      $(ph_action_flag ${night} false)
+    ]"
+  else
     ph_rule "Daylight Off" "[
       $(ph_condition_daylight ${daylight} false)
     ]" "[
@@ -320,19 +333,6 @@ function ph_rules_night() {
       $(ph_condition_daylight ${daylight})
     ]" "[
       $(ph_action_lightlevel ${lightlevel} 40000),
-      $(ph_action_flag ${night} false)
-    ]"
-  else
-    ph_rule "Daylight On" "[
-      $(ph_condition_flag ${daylight} false)
-    ]" "[
-      $(ph_action_lightlevel ${lightlevel} 0)
-    ]"
-
-    ph_rule "Daylight On" "[
-      $(ph_condition_flag ${daylight})
-    ]" "[
-    $(ph_action_lightlevel ${lightlevel} 40000),
       $(ph_action_flag ${night} false)
     ]"
   fi
@@ -368,17 +368,17 @@ function ph_rules_status() {
   local -i flag=${3}
   local -i group=${4}
 
-  ph_rule "${room} Status <1" "[
-    $(ph_condition_status ${status} lt 1)
-  ]" "[
-    $(ph_action_flag ${flag} false)
-  ]"
-
-  ph_rule "${room} Status >0" "[
-    $(ph_condition_status ${status} gt 0)
-  ]" "[
-    $(ph_action_flag ${flag})
-  ]"
+  # ph_rule "${room} Status <1" "[
+  #   $(ph_condition_status ${status} lt 1)
+  # ]" "[
+  #   $(ph_action_flag ${flag} false)
+  # ]"
+  #
+  # ph_rule "${room} Status >0" "[
+  #   $(ph_condition_status ${status} gt 0)
+  # ]" "[
+  #   $(ph_action_flag ${flag})
+  # ]"
 
   if [ ! -z "${4}" ] ; then
     ph_rule "${room} Status 2" "[
@@ -400,18 +400,20 @@ function ph_rules_status() {
       $(ph_condition_status ${status} 3),
       $(ph_condition_ddx ${status} "00:05:00")
     ]" "[
-      $(ph_action_status ${status} 0)
+      $(ph_action_status ${status} 0),
+      $(ph_action_flag ${flag} false)
     ]"
   fi
 }
 
-# Usage: ph_rules_wakeup room status group night scene
+# Usage: ph_rules_wakeup room status flag group night scene
 function ph_rules_wakeup() {
   local room="${1}"
   local -i status=${2}
-  local -i group=${3}
-  local -i night=${4}
-  local scene="${5}"
+  local -i flag=${3}
+  local -i group=${4}
+  local -i night=${5}
+  local scene="${6}"
 
   ph_rule "${room} Wakeup 1/3" "[
     $(ph_condition_status ${status} -2)
@@ -431,18 +433,20 @@ function ph_rules_wakeup() {
     $(ph_condition_status ${status} -2),
     $(ph_condition_ddx ${status} status "00:10:10")
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(ph_action_status ${status} 1),
+    $(ph_action_flag ${flag})
   ]"
 }
 
 # ===== Motion Sensors =========================================================
 
-# Usage: ph_rules_motion room status motion [timeout]
+# Usage: ph_rules_motion room status flag motion [timeout]
 function ph_rules_motion() {
   local room="${1}"
   local -i status=${2}
-  local -i motion=${3}
-  local timeout=${4}
+  local -i flag=${3}
+  local -i motion=${4}
+  local timeout=${5}
 
   if [ -z "${timeout}" ] ; then
     ph_rule "${room} Motion Clear" "[
@@ -458,7 +462,8 @@ function ph_rules_motion() {
       $(ph_condition_ddx ${motion} ${timeout}),
       $(ph_condition_status ${status} gt -1)
     ]" "[
-      $(ph_action_status ${status} 0)
+      $(ph_action_status ${status} 0),
+      $(ph_action_flag ${flag} false)
     ]"
   fi
   ph_rule "${room} Motion Detected" "[
@@ -466,7 +471,8 @@ function ph_rules_motion() {
     $(ph_condition_dx ${motion}),
     $(ph_condition_status ${status} gt -1)
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(ph_action_status ${status} 1),
+    $(ph_action_flag ${flag})
   ]"
 }
 
@@ -488,18 +494,20 @@ function ph_rules_leave_room() {
 
 # ===== Door Sensors ===========================================================
 
-# Usage: ph_rules_room room status door
+# Usage: ph_rules_room room status flag door
 function ph_rules_door() {
   local room="${1}"
   local -i status=${2}
-  local -i door=${3}
+  local -i flag=${3}
+  local -i door=${4}
 
   ph_rule "${room} Door Close" "[
     $(ph_condition_open ${door} false),
     $(ph_condition_dx ${door}),
     $(ph_condition_status ${status} gt -1)
   ]" "[
-    $(ph_action_status ${status} 0)
+    $(ph_action_status ${status} 0),
+    $(ph_action_flag ${flag} false)
   ]"
 
   ph_rule "${room} Door Open" "[
@@ -507,24 +515,27 @@ function ph_rules_door() {
     $(ph_condition_dx ${door}),
     $(ph_condition_status ${status} gt -1)
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(ph_action_status ${status} 1),
+    $(ph_action_flag ${flag})
   ]"
 }
 
 # ===== Switches ===============================================================
 
-# Usage: ph_rules_dimmer_onoff room status dimmer motion group
+# Usage: ph_rules_dimmer_onoff room status flag dimmer motion group
 function ph_rules_dimmer_onoff() {
   local room="${1}"
   local -i status=${2}
-  local -i dimmer=${3}
-  local -i motion=${4}
-  local -i group=${5}
+  local -i flag=${3}
+  local -i dimmer=${4}
+  local -i motion=${5}
+  local -i group=${6}
 
   ph_rule "${room} Dimmer Off Press" "[
     $(ph_condition_buttonevent ${dimmer} 4002)
   ]" "[
-    $(ph_action_status ${status} 0)
+    $(ph_action_status ${status} 0),
+    $(ph_action_flag ${flag} false)
   ]"
 
   ph_rule "${room} Dimmer Off Hold" "[
@@ -537,34 +548,38 @@ function ph_rules_dimmer_onoff() {
   ph_rule "${room} Dimmer On Press" "[
     $(ph_condition_buttonevent ${dimmer} 1002)
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(ph_action_status ${status} 1),
+    $(ph_action_flag ${flag})
   ]"
 
   ph_rule "${room} Dimmer On Hold" "[
   $(ph_condition_buttonevent ${dimmer} 1001)
   ]" "[
-    $(ph_action_scene_recall ${group} ${default})
+    $(ph_action_scene_recall ${group} ${group})
   ]"
 }
 
-# Usage: ph_rules_switch_toggle room status switch
+# Usage: ph_rules_switch_toggle room status flag switch
 function ph_rules_switch_toggle() {
   local room="${1}"
   local -i status=${2}
-  local -i switch=${3}
+  local -i flag=${3}
+  local -i switch=${4}
 
   ph_rule "${room} Switch On/Off Press (1/2)" "[
     $(ph_condition_buttonevent ${switch} 1002),
     $(ph_condition_status ${status} gt 0)
   ]" "[
-    $(ph_action_status ${status} 0)
+    $(ph_action_status ${status} 0),
+    $(ph_action_flag ${flag} false)
   ]"
 
   ph_rule "${room} Switch On/Off Press (2/2)" "[
     $(ph_condition_buttonevent ${switch} 1002),
-    $(ph_condition_status ${status} -lt 1)
+    $(ph_condition_status ${status} lt 1)
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(ph_action_status ${status} 1),
+    $(ph_action_flag ${flag})
   ]"
 }
 
