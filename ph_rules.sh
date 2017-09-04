@@ -311,13 +311,13 @@ function ph_rules_night() {
 
   if [ "${_ph_model}" == "deCONZ" ] ; then
     ph_rule "Daylight Off" "[
-      $(ph_condition_flag ${daylight} false)
+      $(ph_condition_status ${daylight} 0)
     ]" "[
       $(ph_action_lightlevel ${lightlevel} 0)
     ]"
 
     ph_rule "Daylight On" "[
-      $(ph_condition_flag ${daylight})
+      $(ph_condition_status ${daylight} 1)
     ]" "[
       $(ph_action_lightlevel ${lightlevel} 40000),
       $(ph_action_flag ${night} false)
