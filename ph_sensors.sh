@@ -63,9 +63,9 @@ function ph_sensors_init() {
   done
 
   # Delete existing Hue motion sensor resoucelinks.
-  for id in $(ph_json_args=-alph_get /resourcelinks |
+  for id in $(ph_json_args=-al ph_get /resourcelinks |
               grep /classid:10010 | cut -d / -f 2) ; do
-    ph_delete /resourcelinks/${id}
+    ph_delete "/resourcelinks/${id}"
     _ph_info "/resourcelinks/${id}: deleted"
   done
 }
