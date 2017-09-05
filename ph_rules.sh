@@ -368,17 +368,24 @@ function ph_rules_status() {
   local -i flag=${3}
   local -i group=${4}
 
-  # ph_rule "${room} Status <1" "[
-  #   $(ph_condition_status ${status} lt 1)
-  # ]" "[
-  #   $(ph_action_flag ${flag} false)
-  # ]"
-  #
-  # ph_rule "${room} Status >0" "[
-  #   $(ph_condition_status ${status} gt 0)
-  # ]" "[
-  #   $(ph_action_flag ${flag})
-  # ]"
+  ph_rule "{room} Off" "[
+    $(ph_condition_flag ${flag} false),
+    $(ph_condition_status gt 0)
+  ]" "[
+    $(ph_action_status 0)
+  ]"
+
+  ph_rule "${room} Status <1" "[
+    $(ph_condition_status ${status} lt 1)
+  ]" "[
+    $(ph_action_flag ${flag} false)
+  ]"
+
+  ph_rule "${room} Status >0" "[
+    $(ph_condition_status ${status} gt 0)
+  ]" "[
+    $(ph_action_flag ${flag})
+  ]"
 
   if [ ! -z "${4}" ] ; then
     ph_rule "${room} Status 2" "[
@@ -400,8 +407,7 @@ function ph_rules_status() {
       $(ph_condition_status ${status} 3),
       $(ph_condition_ddx ${status} "00:05:00")
     ]" "[
-      $(ph_action_status ${status} 0),
-      $(ph_action_flag ${flag} false)
+      $(ph_action_status ${status} 0)
     ]"
   fi
 }
@@ -433,8 +439,7 @@ function ph_rules_wakeup() {
     $(ph_condition_status ${status} -2),
     $(ph_condition_ddx ${status} status "00:10:10")
   ]" "[
-    $(ph_action_status ${status} 1),
-    $(ph_action_flag ${flag})
+    $(ph_action_status ${status} 1)
   ]"
 }
 
@@ -462,8 +467,7 @@ function ph_rules_motion() {
       $(ph_condition_ddx ${motion} ${timeout}),
       $(ph_condition_status ${status} gt -1)
     ]" "[
-      $(ph_action_status ${status} 0),
-      $(ph_action_flag ${flag} false)
+      $(ph_action_status ${status} 0)
     ]"
   fi
   ph_rule "${room} Motion Detected" "[
@@ -471,8 +475,7 @@ function ph_rules_motion() {
     $(ph_condition_dx ${motion}),
     $(ph_condition_status ${status} gt -1)
   ]" "[
-    $(ph_action_status ${status} 1),
-    $(ph_action_flag ${flag})
+    $(ph_action_status ${status} 1)
   ]"
 }
 
@@ -506,8 +509,7 @@ function ph_rules_door() {
     $(ph_condition_dx ${door}),
     $(ph_condition_status ${status} gt -1)
   ]" "[
-    $(ph_action_status ${status} 0),
-    $(ph_action_flag ${flag} false)
+    $(ph_action_status ${status} 0)
   ]"
 
   ph_rule "${room} Door Open" "[
@@ -515,8 +517,7 @@ function ph_rules_door() {
     $(ph_condition_dx ${door}),
     $(ph_condition_status ${status} gt -1)
   ]" "[
-    $(ph_action_status ${status} 1),
-    $(ph_action_flag ${flag})
+    $(ph_action_status ${status} 1)
   ]"
 }
 
@@ -535,8 +536,7 @@ function ph_rules_dimmer_onoff() {
   ph_rule "${room} Dimmer Off Press" "[
     $(ph_condition_buttonevent ${dimmer} 4002)
   ]" "[
-    $(ph_action_status ${status} 0),
-    $(ph_action_flag ${flag} false)
+    $(ph_action_status ${status} 0)
   ]"
 
   ph_rule "${room} Dimmer Off Hold" "[
@@ -549,8 +549,7 @@ function ph_rules_dimmer_onoff() {
   ph_rule "${room} Dimmer On Press" "[
     $(ph_condition_buttonevent ${dimmer} 1002)
   ]" "[
-    $(ph_action_status ${status} 1),
-    $(ph_action_flag ${flag})
+    $(ph_action_status ${status} 1)
   ]"
 
   ph_rule "${room} Dimmer On Hold" "[
@@ -571,16 +570,14 @@ function ph_rules_switch_toggle() {
     $(ph_condition_buttonevent ${switch} 1002),
     $(ph_condition_status ${status} gt 0)
   ]" "[
-    $(ph_action_status ${status} 0),
-    $(ph_action_flag ${flag} false)
+    $(ph_action_status ${status} 0)
   ]"
 
   ph_rule "${room} Switch On/Off Press (2/2)" "[
     $(ph_condition_buttonevent ${switch} 1002),
     $(ph_condition_status ${status} lt 1)
   ]" "[
-    $(ph_action_status ${status} 1),
-    $(ph_action_flag ${flag})
+    $(ph_action_status ${status} 1)
   ]"
 }
 
