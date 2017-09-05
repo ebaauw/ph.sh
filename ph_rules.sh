@@ -370,6 +370,7 @@ function ph_rules_status() {
 
   ph_rule "{room} Off" "[
     $(ph_condition_flag ${flag} false),
+    $(ph_condition_dx ${flag}),
     $(ph_condition_status ${status} gt 0)
   ]" "[
     $(ph_action_status ${status} 0)
