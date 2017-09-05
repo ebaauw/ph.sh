@@ -301,7 +301,7 @@ function ph_rules_boottime() {
   ]"
 }
 
-# Usage: ph_rules_night night lightlevel [daylight [morning evening]]
+# Usage: ph_rules_night night lightlevel daylight [morning evening]
 function ph_rules_night() {
   local -i night=${1}
   local -i lightlevel=${2}
@@ -522,7 +522,7 @@ function ph_rules_door() {
 
 # ===== Switches ===============================================================
 
-# Usage: ph_rules_dimmer_onoff room status flag dimmer motion group
+# Usage: ph_rules_dimmer_onoff room status flag dimmer motion group scene
 function ph_rules_dimmer_onoff() {
   local room="${1}"
   local -i status=${2}
@@ -530,6 +530,7 @@ function ph_rules_dimmer_onoff() {
   local -i dimmer=${4}
   local -i motion=${5}
   local -i group=${6}
+  local -i scene=${7}
 
   ph_rule "${room} Dimmer Off Press" "[
     $(ph_condition_buttonevent ${dimmer} 4002)
@@ -555,7 +556,7 @@ function ph_rules_dimmer_onoff() {
   ph_rule "${room} Dimmer On Hold" "[
   $(ph_condition_buttonevent ${dimmer} 1001)
   ]" "[
-    $(ph_action_scene_recall ${group} ${group})
+    $(ph_action_scene_recall ${group} ${scene})
   ]"
 }
 
