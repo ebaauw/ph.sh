@@ -128,31 +128,31 @@ function ph_sensor_clip_presence() {
 }
 
 # Create CLIPLightLevel sensor.
-# Usage: ph_sensor_clip_lightlevel id name
+# Usage: ph_sensor_clip_lightlevel id mid name
 function ph_sensor_clip_lightlevel() {
   _ph_sensor_clip "${1}" "${2}" "${3}" CLIPLightLevel
 }
 
 # Create CLIPTemperature sensor.
-# Usage: ph_sensor_clip_temperature id name
+# Usage: ph_sensor_clip_temperature id mid name
 function ph_sensor_clip_temperature() {
   _ph_sensor_clip "${1}" "${2}" "${3}" CLIPTemperature
 }
 
 # Create CLIPHumidity sensor.
-# Usage: ph_sensor_clip_humidity id name
+# Usage: ph_sensor_clip_humidity id mid name
 function ph_sensor_clip_humidity() {
   _ph_sensor_clip "${1}" "${2}" "${3}" CLIPHumidity
 }
 
 # Create CLIPPressure sensor.
-# Usage: ph_sensor_clip_pressure id name
+# Usage: ph_sensor_clip_pressure id mid name
 function ph_sensor_clip_pressure() {
   _ph_sensor_clip "${1}" "${2}" "${3}" CLIPPressure
 }
 
 # Create CLIPOpenClose sensor.
-# Usage: ph_sensor_clip_pressure id name
+# Usage: ph_sensor_clip_openclose id mid name
 function ph_sensor_clip_openclose() {
   _ph_sensor_clip "${1}" "${2}" "${3}" CLIPOpenClose
 }
