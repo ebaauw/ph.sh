@@ -491,7 +491,8 @@ function _ph_http() {
   _ph_debug "${_ph_bridge} command: ${cmd}"
   response=$(eval ${cmd})
   if [ $? -ne 0 ] ; then
-    _ph_error "${_ph_bridge} not found"
+    local host="${_ph_host}"
+    _ph_host= _ph_error "${_ph_host}: not found"
     return 1
   fi
   _ph_debug "${_ph_bridge} response: ${response}"
