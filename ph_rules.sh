@@ -368,7 +368,7 @@ function ph_rules_status() {
   local -i flag=${3}
   local -i group=${4}
 
-  ph_rule "{room} Off" "[
+  ph_rule "${room} Off" "[
     $(ph_condition_flag ${flag} false),
     $(ph_condition_dx ${flag}),
     $(ph_condition_status ${status} gt 0)
