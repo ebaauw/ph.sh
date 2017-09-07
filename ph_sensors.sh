@@ -84,7 +84,13 @@ function ph_sensors_cleanup() {
 
 # ===== CLIP SENSORS ===========================================================
 
-# Create CLIP sensor.
+# Create (Multi)CLIP sensor.
+# To reduce the number of HomeKit accessories, homebridge-hue can combine
+# multiple CLIP sensor resources with the same MultiCLIP id (mid) into one
+# accessory.  Typically you'll want to use one MultiCLIP sensor per room, as
+# HomeKit does room assignment per accessory.
+# Provide an empty mid ("") to have homebridge-hue create a separate accessory
+# for the CLIP sensor resource.
 # Usage: id=$(_ph_sensor_clip id mid name type [swversion])
 function _ph_sensor_clip()
 {
@@ -107,6 +113,9 @@ function _ph_sensor_clip()
 }
 
 # Create CLIPGenericFlag sensor.
+# swversion is used to indicate to homebridge-hue whether the sensor should be
+# read-only ("0") or read-write ("1") from HomeKit apps.  Note: this is not yet
+# implemented in to hombridge-hue.
 # Usage: id=$(ph_sensor_clip_flag id mid name [readonly])
 function ph_sensor_clip_flag() {
   local version=1
@@ -115,7 +124,10 @@ function ph_sensor_clip_flag() {
   _ph_sensor_clip "${1}" "${2}" "${3}" CLIPGenericFlag "${version}"
 }
 
+
 # Create CLIPGenericStatus sensor.
+# swversion is used to indicate to homebridge-hue what the minimum and maximum
+# allowed values for the status are.
 # Usage: ph_sensor_clip_status id mid name [min max]]
 function ph_sensor_clip_status() {
   _ph_sensor_clip "${1}" "${2}" "${3}" CLIPGenericStatus "${4:-0},${5:-2}"
@@ -128,9 +140,17 @@ function ph_sensor_clip_presence() {
 }
 
 # Create CLIPLightLevel sensor.
-# Usage: ph_sensor_clip_lightlevel id mid name
+# Usage: ph_sensor_clip_lightlevel id mid name [tholddark tholdoffset]
 function ph_sensor_clip_lightlevel() {
-  _ph_sensor_clip "${1}" "${2}" "${3}" CLIPLightLevel
+  local -i id
+
+  id=$(_ph_sensor_clip "${1}" "${2}" "${3}" CLIPLightLevel)
+  [ $? -eq 0 ] || return 1
+  ph_put "/sensors/${id}/config" "{
+    \"tholddark\": ${4:-12000},
+    \"tholdoffset\": ${5:-4000}
+  }"
+  echo "${id}"
 }
 
 # Create CLIPTemperature sensor.

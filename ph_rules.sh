@@ -285,21 +285,40 @@ function ph_action_scene_recall() {
   fi
 }
 
-# ==============================================================================
+# ===== Boot ===================================================================
 
-# Usage: ph_rules_boottime boottime daylight
+# On startup, all CLIP sensors are initialised to 0.  Then the Hue bridge
+# updates the built-in Daylight sensor.  We can use this to detect that the
+# Hue bridge has booted.  We keep a CLIPGenericStatus sensor (boottime) which
+# is set to 1 when the Daylight sensor changes while boottime is 0.  As we never
+# change boottime afterwards, it's state.lastupdated attribute reflects boot
+# time.
+# Assuming the Hue bridge reboots because power has just been restored after a
+# power outage, we'll also turn off all lights at boot.
+
+# Usage: ph_rules_boottime boottime
 function ph_rules_boottime() {
   local -i boottime=${1}
-  local -i daylight=${2:-1}
 
-  ph_rule "Boot Time" "[
-    $(ph_condition_dx ${daylight}),
-    $(ph_condition_status ${boottime} 0)
-  ]" "[
-    $(ph_action_status ${boottime} 1),
-    $(ph_action_group_on 0 false)
-  ]"
+  if [ "${_ph_model}" != "deCONZ" ] ; then
+    ph_rule "Boot Time" "[
+      $(ph_condition_dx 1),
+      $(ph_condition_status ${boottime} 0)
+    ]" "[
+      $(ph_action_status ${boottime} 1),
+      $(ph_action_group_on 0 false)
+    ]"
+  fi
 }
+
+# ===== Night and Day ==========================================================
+
+# deCONZ doesn't have a built-in Daylight sensor (yet?), so we simulate one
+# with a CLIPLightLevel sensor (lightlevel).  However, this sensor cannot be
+# set from HomeKit, so we use a CLIPGenericStatus sensor (daylight), which
+# is updated from Automations in the Home app (!) at Sunrise and Sunset.
+# For the Hue bridge, we still use the CLIPLightLevel sensor (lightlevel), but
+# now it is updated from the built-in Daylight sensor.
 
 # Usage: ph_rules_night night lightlevel daylight [morning evening]
 function ph_rules_night() {
@@ -336,6 +355,7 @@ function ph_rules_night() {
       $(ph_action_flag ${night} false)
     ]"
   fi
+
   ph_rule "Night On" "[
     $(ph_condition_localtime ${evening} ${morning})
   ]" "[
@@ -351,15 +371,22 @@ function ph_rules_night() {
 
 # ===== Room Status ============================================================
 
-# Room Status:
-#  #  status                      room  auto
-# ==  =========================   ====  ====
-# -2  wakeup                      off   off
-# -1  disabled                    off   off
-#  0  no presence                 off   on
-#  1  presence                    on    on
-#  2  presence in adjacent room   on    on
-#  3  pending no presence         on    on
+# For each room, we keep a CLIPGenericFlag sensor (flag), as virtual master
+# switch, and a CLIPGenericStatus sensor (status), to store the room state:
+#
+# status   state                       room  automation
+# ======   =========================   ====  ==========
+#    -2    wakeup in progress          off   off
+#    -1    disabled                    off   off
+#     0    no presence                 off   on
+#     1    presence                    on    on
+#     2    presence in adjacent room   on    on
+#     3    pending no presence         on    on
+#
+# The status is maintained from motion sensors, door sensors, and switches.
+# The flag is maintained automatically, from the status, or manually from
+# HomeKit where the flag is exposed as switch.  The lights are controlled from
+# the flag (in combination with the time of day and lightlevel).
 
 # Usage: ph_rules room status flag [group]
 function ph_rules_status() {
@@ -446,6 +473,16 @@ function ph_rules_wakeup() {
 
 # ===== Motion Sensors =========================================================
 
+# We use two different patterns for motion sensors:
+# - For hallways (where you never sit still), the room status is set to no
+#   presence when motion hasn't been detected for 1 minute;
+# - For rooms (where you sit still), the room is set to no presence when
+#   motion hasn't been detected for 5 minutes, after some-one has left the room.
+#   This is detected by a sequence of motion detected in room (status 1), motion
+#   detected in adjacent room (status 2), no more motion detected in room within
+#   15 seconds (status 3).  A warning is given at 1 minute's notice before the
+#   lights are turned off.
+
 # Usage: ph_rules_motion room status flag motion [timeout]
 function ph_rules_motion() {
   local room="${1}"
@@ -457,7 +494,6 @@ function ph_rules_motion() {
   if [ -z "${timeout}" ] ; then
     ph_rule "${room} Motion Clear" "[
       $(ph_condition_motion ${motion} false),
-      $(ph_condition_dx ${motion}),
       $(ph_condition_status ${status} 2)
     ]" "[
       $(ph_action_status ${status} 3)
@@ -473,7 +509,6 @@ function ph_rules_motion() {
   fi
   ph_rule "${room} Motion Detected" "[
     $(ph_condition_motion ${motion}),
-    $(ph_condition_dx ${motion}),
     $(ph_condition_status ${status} gt -1)
   ]" "[
     $(ph_action_status ${status} 1)
@@ -489,7 +524,6 @@ function ph_rules_leave_room() {
 
   ph_rule "${room} to ${room2}" "[
     $(ph_condition_motion ${motion}),
-    $(ph_condition_dx ${motion}),
     $(ph_condition_status ${status} 1)
   ]" "[
     $(ph_action_status ${status} 2)
@@ -507,7 +541,6 @@ function ph_rules_door() {
 
   ph_rule "${room} Door Close" "[
     $(ph_condition_open ${door} false),
-    $(ph_condition_dx ${door}),
     $(ph_condition_status ${status} gt -1)
   ]" "[
     $(ph_action_status ${status} 0)
@@ -515,7 +548,6 @@ function ph_rules_door() {
 
   ph_rule "${room} Door Open" "[
     $(ph_condition_open ${door}),
-    $(ph_condition_dx ${door}),
     $(ph_condition_status ${status} gt -1)
   ]" "[
     $(ph_action_status ${status} 1)
@@ -540,6 +572,7 @@ function ph_rules_dimmer_onoff() {
     $(ph_action_status ${status} 0)
   ]"
 
+  # Disable room automation.  Flash motion sensor light as confirmation.
   ph_rule "${room} Dimmer Off Hold" "[
     $(ph_condition_buttonevent ${dimmer} 4001)
   ]" "[
@@ -553,6 +586,7 @@ function ph_rules_dimmer_onoff() {
     $(ph_action_status ${status} 1)
   ]"
 
+  # Set default scene.
   ph_rule "${room} Dimmer On Hold" "[
   $(ph_condition_buttonevent ${dimmer} 1001)
   ]" "[
@@ -613,7 +647,7 @@ function ph_rules_dimmer_updown() {
   ]"
 }
 
-# ==============================================================================
+# ===== Lights =================================================================
 
 # Usage: ph_rules_light room flag group night default nightmode [lightlevel]
 function ph_rules_light() {
@@ -631,7 +665,7 @@ function ph_rules_light() {
     $(ph_action_group_on ${group} false)
   ]"
 
-  if [ -z "${7}" ] ; then
+  if [ -z "${lightlevel}" ] ; then
     ph_rule "${room} On, Day" "[
       $(ph_condition_flag ${flag}),
       $(ph_condition_flag ${night} false)
