@@ -665,7 +665,7 @@ function ph_rules_light() {
     $(ph_action_group_on ${group} false)
   ]"
 
-  if [ -z "${lightlevel}" ] ; then
+  if [ -z "${7}" ] ; then
     ph_rule "${room} On, Day" "[
       $(ph_condition_flag ${flag}),
       $(ph_condition_flag ${night} false)
