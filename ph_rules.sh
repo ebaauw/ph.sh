@@ -296,19 +296,18 @@ function ph_action_scene_recall() {
 # Assuming the Hue bridge reboots because power has just been restored after a
 # power outage, we'll also turn off all lights at boot.
 
-# Usage: ph_rules_boottime boottime
+# Usage: ph_rules_boottime boottime [daylight]
 function ph_rules_boottime() {
-  local -i boottime=${1}
+  local -i boottime="${1}"
+  local -i daylight="${2:-1}"
 
-  if [ "${_ph_model}" != "deCONZ" ] ; then
-    ph_rule "Boot Time" "[
-      $(ph_condition_dx 1),
-      $(ph_condition_status ${boottime} 0)
-    ]" "[
-      $(ph_action_status ${boottime} 1),
-      $(ph_action_group_on 0 false)
-    ]"
-  fi
+  ph_rule "Boot Time" "[
+    $(ph_condition_dx ${daylight}),
+    $(ph_condition_status ${boottime} 0)
+  ]" "[
+    $(ph_action_status ${boottime} 1),
+    $(ph_action_group_on 0 false)
+  ]"
 }
 
 # ===== Night and Day ==========================================================
