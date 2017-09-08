@@ -493,7 +493,7 @@ function ph_rules_motion() {
   if [ -z "${timeout}" ] ; then
     ph_rule "${room} Motion Clear" "[
       $(ph_condition_motion ${motion} false),
-      $(ph_condition_dx ${motion}),
+      $(ph_condition_dx ${motion} presence),
       $(ph_condition_status ${status} 2)
     ]" "[
       $(ph_action_status ${status} 3)
@@ -501,7 +501,7 @@ function ph_rules_motion() {
   else
     ph_rule "${room} Motion Clear" "[
       $(ph_condition_motion ${motion} false),
-      $(ph_condition_ddx ${motion} ${timeout}),
+      $(ph_condition_ddx ${motion} presence ${timeout}),
       $(ph_condition_status ${status} gt -1)
     ]" "[
       $(ph_action_status ${status} 0)
@@ -509,7 +509,7 @@ function ph_rules_motion() {
   fi
   ph_rule "${room} Motion Detected" "[
     $(ph_condition_motion ${motion}),
-    $(ph_condition_dx ${motion}),
+    $(ph_condition_dx ${motion} presence),
     $(ph_condition_status ${status} gt -1)
   ]" "[
     $(ph_action_status ${status} 1)
@@ -525,7 +525,7 @@ function ph_rules_leave_room() {
 
   ph_rule "${room} to ${room2}" "[
     $(ph_condition_motion ${motion}),
-    $(ph_condition_dx ${motion}),
+    $(ph_condition_dx ${motion} presence),
     $(ph_condition_status ${status} 1)
   ]" "[
     $(ph_action_status ${status} 2)
@@ -543,7 +543,7 @@ function ph_rules_door() {
 
   ph_rule "${room} Door Close" "[
     $(ph_condition_open ${door} false),
-    $(ph_condition_dx ${door}),
+    $(ph_condition_dx ${door} open),
     $(ph_condition_status ${status} gt -1)
   ]" "[
     $(ph_action_status ${status} 0)
@@ -551,7 +551,7 @@ function ph_rules_door() {
 
   ph_rule "${room} Door Open" "[
     $(ph_condition_open ${door}),
-    $(ph_condition_dx ${door}),
+    $(ph_condition_dx ${door} open),
     $(ph_condition_status ${status} gt -1)
   ]" "[
     $(ph_action_status ${status} 1)
