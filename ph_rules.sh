@@ -23,6 +23,8 @@ function ph_rule() {
     return 1
   fi
   _ph_info "/rules/${id}: \"${name}\""
+  # Workaround for https://github.com/dresden-elektronik/deconz-rest-plugin/issues/224
+  [ "${_ph_model}" == "deCONZ" ] && ph_put /rules/${id} "{\"actions\": ${actions}}"
 }
 
 # Usage: ph_rules_delete
