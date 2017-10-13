@@ -234,27 +234,32 @@ function ph_action_flag() {
   ph_action_sensor_state  "${1}" "{\"flag\": ${2:-true}}"
 }
 
-# Usage: condition="$(ph_action_status sensor value)"
+# Usage: action="$(ph_action_status sensor value)"
 function ph_action_status() {
   ph_action_sensor_state "${1}" "{\"status\": ${2}}"
 }
 
-# Usage: condition="$(ph_action_lightlevel sensor value)"
+# Usage: action="$(ph_action_lightlevel sensor value)"
 function ph_action_lightlevel() {
   ph_action_sensor_state "${1}" "{\"lightlevel\": ${2}}"
 }
 
-# Usage: condition="$(ph_action_group_on sensor [value])"
+# Usage: action="$(ph_action_light_on light [value])"
+function ph_action_light_on() {
+  ph_action_light_state  "${1}" "{\"on\": ${2:-true}}"
+}
+
+# Usage: condition="$(ph_action_group_on group [value])"
 function ph_action_group_on() {
   ph_action_group_action  "${1}" "{\"on\": ${2:-true}}"
 }
 
-# Usage: condition="$(ph_action_group_alert sensor [value])"
+# Usage: action="$(ph_action_group_alert group [value])"
 function ph_action_group_alert() {
   ph_action_group_action  "${1}" "{\"alert\": \"${2:-select}\"}"
 }
 
-# Usage: condition="$(ph_action_sensor_alert sensor [value])"
+# Usage: action="$(ph_action_sensor_alert sensor [value])"
 function ph_action_sensor_alert() {
   ph_action_sensor_config "${1}" "{\"alert\": \"${2:-select}\"}"
 }
@@ -303,9 +308,9 @@ function ph_rules_boottime() {
 
   ph_rule "Boot Time" "[
     $(ph_condition_dx ${night}),
-    $(ph_condition_status ${boottime} 0)
+    $(ph_condition_flag ${boottime} false)
   ]" "[
-    $(ph_action_status ${boottime} 1),
+    $(ph_action_flag ${boottime}),
     $(ph_action_group_on 0 false)
   ]"
 }
@@ -329,13 +334,13 @@ function ph_rules_night() {
 
   if [ "${_ph_model}" == "deCONZ" ] ; then
     ph_rule "Daylight Off" "[
-      $(ph_condition_status ${daylight} 0)
+      $(ph_condition_flag ${daylight} false)
     ]" "[
       $(ph_action_lightlevel ${lightlevel} 0)
     ]"
 
     ph_rule "Daylight On" "[
-      $(ph_condition_status ${daylight} 1)
+      $(ph_condition_flag ${daylight})
     ]" "[
       $(ph_action_lightlevel ${lightlevel} 40000),
       $(ph_action_flag ${night} false)
@@ -422,15 +427,23 @@ function ph_rules_status() {
       $(ph_action_status ${status} 1)
     ]"
 
-    ph_rule "${room} Status 3 (1/2)" "[
+    ph_rule "${room} Status 3 (1/3)" "[
       $(ph_condition_status ${status} 3),
       $(ph_condition_ddx ${status} "00:04:00"),
       $(ph_condition_flag ${flag})
     ]" "[
-      $(ph_action_group_alert ${group})
+      $(ph_action_group_alert ${group} breathe)
     ]"
 
-    ph_rule "${room} Status 3 (2/2)" "[
+    ph_rule "${room} Status 3 (2/3)" "[
+      $(ph_condition_status ${status} 3),
+      $(ph_condition_ddx ${status} "00:04:01"),
+      $(ph_condition_flag ${flag})
+    ]" "[
+      $(ph_action_group_alert ${group} finish)
+    ]"
+
+    ph_rule "${room} Status 3 (3/3)" "[
       $(ph_condition_status ${status} 3),
       $(ph_condition_ddx ${status} "00:05:00")
     ]" "[
@@ -707,4 +720,27 @@ function ph_rules_light() {
       $(ph_action_scene_recall ${group} ${nightmode})
     ]"
   fi
+}
+
+# ===== Fan ====================================================================
+
+# Usage: ph_rules_fan room flag fan temperature
+function ph_rules_fan() {
+  local room="${1}"
+  local -i flag=${2}
+  local -i fan=${3}
+  local -i temperature=${4}
+
+  ph_rule "${room} Cool" "[
+  $(ph_condition_temperature ${temperature} lt 2250)
+  ]" "[
+    $(ph_action_light_on ${fan} false)
+  ]"
+
+  ph_rule "${room} Hot" "[
+    $(ph_condition_flag ${flag}),
+    $(ph_condition_temperature ${temperature} gt 2300)
+  ]" "[
+    $(ph_action_light_on ${fan})
+  ]"
 }
