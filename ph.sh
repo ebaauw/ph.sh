@@ -35,7 +35,7 @@ function ph_get() {
   local response
 
   case "${1}" in
-    /groups/*/scene*)
+    /groups/*/scene*|/lights/*/connectivity2)
       ;;
     *)
       case "${p}" in
@@ -345,19 +345,19 @@ function ph_light_values() {
   _ph_info "${light}: ${manufacturer} ${model} ${ltype} ${name}"
 
   local ct
-  local ct_min
-  local ct_max
+  local ct_min="$(json -nc "${response}" -p /ctmin)"
+  local ct_max="$(json -nc "${response}" -p /ctmax)"
   local xy
   local xy_red
   local xy_green
   local xy_blue
 
   local -i max=0
-  local zero="0.0000"
+  local zero="0.0001"
   local one="1.0000"
   if [ "${_ph_model}" == "deCONZ" ] ; then
     max=60
-    zero="0"
+    zero="9.19132e-05"
     one="1"
   fi
 
@@ -379,10 +379,12 @@ function ph_light_values() {
     _ph_info -n "${light}: xy: ${1} .."
     ph_put "${state}" "{\"xy\":${2}}"
     xy=$(ph_json_args=-n ph_get "${state}/xy")
-    while [ "${xy}" == "${2}" ] ; do
+    local -i n=0
+    while [ "${xy}" == "${2}" -a ${n} -le ${max} ] ; do
       _ph_info -n -s .
       sleep 5
       xy=$(ph_json_args=-n ph_get "${state}/xy")
+      n=$((n + 1))
     done
     _ph_info -s " ${xy}"
   }
@@ -390,13 +392,18 @@ function ph_light_values() {
   ph_put "${state}" '{"on":true}'
 
   if [ ! -z "${ct}" ] ; then
-    ct_value cool 153
-    ct_min="${ct}"
-    ct_value warm 500
-    ct_max="${ct}"
+    if [ -z "${ct_min}" ] ; then
+      ct_value cool 153
+      ct_min="${ct}"
+    fi
+    if [ -z "${ct_max}" ] ; then
+      ct_value warm 500
+      ct_max="${ct}"
+    fi
   fi
 
   if [ ! -z "${xy}" ] ; then
+    max=60
     xy_value red "[${one},${zero}]"
     xy_red="${xy}"
     xy_value green "[${zero},${one}]"
