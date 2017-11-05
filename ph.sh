@@ -104,7 +104,9 @@ function ph_post() {
 
   response=$(_ph_http POST "${1}" "${2}")
   [ $? -eq 0 ] || return 1
-  ph_unquote "$(json -al -c "${response}" | cut -d : -f 2)"
+  if [ ! -z "${response}" ] ; then
+    ph_unquote "$(json -al -c "${response}" | cut -d : -f 2)"
+  fi
 }
 
 # Delete resource from the Philips Hue Bridge.
@@ -444,6 +446,7 @@ function _ph_http() {
   local data
   local cmd
   local response
+  local status
   local responselines
   local errorlines
 
@@ -494,7 +497,7 @@ function _ph_http() {
 
   # Send HTTP request to the Hue bridge.
   cmd="curl -s${method} -H \"Content-Type: application/json\"${data}"
-  cmd="${cmd} \"http://${_ph_host}${resource}\""
+  cmd="${cmd} -D - \"http://${_ph_host}${resource}\""
   _ph_debug "${_ph_bridge} command: ${cmd}"
   response=$(eval ${cmd})
   if [ $? -ne 0 ] ; then
@@ -504,7 +507,16 @@ function _ph_http() {
   fi
   _ph_debug "${_ph_bridge} response: ${response}"
 
-  # Check response for errors.
+  # Check HTTP/1.1 response header
+  status=$(echo "${response}" | sed -e '2,$d' -e 's/.$//g' | cut -d ' ' -f 2-)
+  if [ "${status}" != '200 OK' ] ; then
+    _ph_error "http status ${status}"
+    return 1
+  fi
+  response=$(echo "${response}" | sed '1,/^.$/d')
+  [ -z "${response}" ] && return 0
+
+  # Check response body for errors.
   responselines=$(echo "${response}" | json -al 2>/dev/null)
   if [ $? -ne 0 -o "${response}" == '[]' ] ; then
     _ph_error "invalid method ${1} for resource ${2}"
