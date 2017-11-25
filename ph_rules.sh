@@ -547,20 +547,23 @@ function ph_rules_leave_room() {
 
 # ===== Door Sensors ===========================================================
 
-# Usage: ph_rules_room room status flag door
+# Usage: ph_rules_room room status flag door [noclose]
 function ph_rules_door() {
   local room="${1}"
   local -i status=${2}
   local -i flag=${3}
   local -i door=${4}
+  local noclose="${5}"
 
-  ph_rule "${room} Door Close" "[
-    $(ph_condition_open ${door} false),
-    $(ph_condition_dx ${door} open),
-    $(ph_condition_status ${status} gt -1)
-  ]" "[
-    $(ph_action_status ${status} 0)
-  ]"
+  if [ -z "${noclose}" ] ; then
+    ph_rule "${room} Door Close" "[
+      $(ph_condition_open ${door} false),
+      $(ph_condition_dx ${door} open),
+      $(ph_condition_status ${status} gt -1)
+    ]" "[
+      $(ph_action_status ${status} 0)
+    ]"
+  fi
 
   ph_rule "${room} Door Open" "[
     $(ph_condition_open ${door}),
@@ -716,6 +719,15 @@ function ph_rules_light() {
       $(ph_condition_flag ${flag}),
       $(ph_condition_dark ${lightlevel}),
       $(ph_condition_flag ${night})
+    ]" "[
+      $(ph_action_scene_recall ${group} ${nightmode})
+    ]"
+
+    ph_rule "${room} On, Not Daylight, Night" "[
+      $(ph_condition_flag ${flag}),
+      $(ph_condition_daylight ${lightlevel} false),
+      $(ph_condition_flag ${night}),
+      $(ph_condition_dx ${night} flag)
     ]" "[
       $(ph_action_scene_recall ${group} ${nightmode})
     ]"
