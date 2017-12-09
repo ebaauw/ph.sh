@@ -497,6 +497,7 @@ function _ph_http() {
 
   # Send HTTP request to the Hue bridge.
   cmd="curl -s${method} -H \"Content-Type: application/json\"${data}"
+  [ -z "${ph_ddel_v1}" ] || cmd="${cmd} -H \"Accept: vnd.ddel.v1\""
   cmd="${cmd} -D - \"http://${_ph_host}${resource}\""
   _ph_debug "${_ph_bridge} command: ${cmd}"
   response=$(eval ${cmd})
