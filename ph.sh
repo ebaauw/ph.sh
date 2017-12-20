@@ -114,7 +114,7 @@ function ph_post() {
 function ph_delete() {
   local response
 
-  response=$(_ph_http DELETE "${1}")
+  response=$(_ph_http DELETE "${1}" "${2}")
   [ $? -eq 0 ] || return 1
 }
 
@@ -456,7 +456,7 @@ function _ph_http() {
       method=
       data=
       ;;
-    PUT|PATCH|POST)
+    PUT|PATCH|POST|DELETE)
       method=" -X ${1}"
       if [ -z "${3}" ] ; then
         data=
@@ -469,10 +469,10 @@ function _ph_http() {
         data=" -d '${3}'"
       fi
       ;;
-    DELETE)
-      method=" -X ${1}"
-      data=
-      ;;
+    # DELETE)
+    #   method=" -X ${1}"
+    #   data=
+    #   ;;
     *)
       _ph_error "invalid method '${1}'"
       return 1
