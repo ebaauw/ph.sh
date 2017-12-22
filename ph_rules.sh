@@ -545,6 +545,19 @@ function ph_rules_leave_room() {
   ]"
 }
 
+# Usage: ph_rules_motion_init room motion boottime
+function ph_rules_motion_init() {
+  local room="${1}"
+  local -i motion=${2}
+  local -i boottime=${3}
+
+  ph_rule "${room} Motion Init" "[
+    $(ph_condition_ddx ${boottime} "00:00:01")
+  ]" "[
+    $(ph_action_sensor_config "${motion}" '{"duration": 0}')
+  ]"
+}
+
 # ===== Door Sensors ===========================================================
 
 # Usage: ph_rules_room room status flag door [noclose]
