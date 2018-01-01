@@ -447,12 +447,11 @@ function ph_lightlist() {
 
     for light in $(ph_json_args=-atk ph_get /lights) ; do
       if [ ${n} -gt 0 ] ; then
-        echo ','
+        echo -n ','
       fi
       echo -n "\"/lights${light}\""
       n=$((n + 1))
     done
-    echo
   }
 
   # Find "lightlist" resourcelink
@@ -481,9 +480,10 @@ function ph_lightlist() {
     }'
     link="$(ph_unquote $(ph_post /resourcelinks "${body}"))"
   fi
-  local list="$(lightlist)"
-  ph_put /resourcelinks/${link} "{\"links\":[${list}]}"
-  _ph_info "/resourcelinks/${link}: $(echo "${list}" | wc -l) lights"
+  local list="[$(lightlist)]"
+  local -i n=$(json -alc "${list}" | wc -l)
+  ph_put /resourcelinks/${link} "{\"links\":${list}}"
+  _ph_info "/resourcelinks/${link}: ${n} lights"
 }
 
 # ===== UTILITY FUNCTIONS ======================================================
