@@ -28,6 +28,7 @@ Command | Description
 `ph_nupnp_deconz`| Query the dresden elektronik portal for registered deCONZ bridges. <br>The formatted response is written to the standard output.
 `ph_description` | Retrieve the bridge device description in XML.
 `ph_config` | Retrieve the bridge configuration using an unauthorised request. <br>The formatted response is written to the standard output.
+`ph_lightlist` | Create or update a `lightlist` resourcelink for homebridge-hue, containing all `/lights` resources.  This will cause homebridge-hue to delay startup of homebridge, until deCONZ has discovered all lights, and exposed the corresponding resources over the API.  Set `ph_verbose=true` for a message which resourcelink has been created or updated.
 `ph_light_values` _light_ | Discover range of values for `ct` and `xy` supported by _light_. <br>Note that this might take several minutes.  Set `ph_verbose=true` to see progress messages on standard error. <br>The formatted response is written to the standard output.
 
 These commands depend on `curl`, to send HTTP requests to the bridge, and on `json`, to format the bridge responses into human readable or machine readable output.  A `bash` implementation of `json` is provided by `json.sh`.  See `json -h` for its usage.
