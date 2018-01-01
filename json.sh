@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # json.sh
-# Copyright © 2017 Erik Baauw. All rights reserved.
+# Copyright © 2017, 2018 Erik Baauw. All rights reserved.
 
 # Bash library process Java Script Object Notation, JSON.
 # See http://json.org/ for definition of JSON.

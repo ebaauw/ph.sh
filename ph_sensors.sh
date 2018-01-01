@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # ph_sensors.sh
-# Copyright © 2017 Erik Baauw. All rights reserved.
+# Copyright © 2017, 2018 Erik Baauw. All rights reserved.
 #
 # Create/configure sensors on the Hue bridge or deCONZ gateway.
 # Note: be sure to re-create rules after re-creating sensors.
