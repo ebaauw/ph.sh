@@ -434,6 +434,58 @@ function ph_light_values() {
   json -c "${s}"
 }
 
+# ===== LIGHT LIST =============================================================
+
+# Create/update resourcelink with all lights.
+# Usage: ph_lightlist
+function ph_lightlist() {
+  # Return list of all lights.
+  # Usage: list="$(light_list)"
+  function lightlist() {
+    local -i n=0
+    local light
+
+    for light in $(ph_json_args=-atk ph_get /lights) ; do
+      if [ ${n} -gt 0 ] ; then
+        echo ','
+      fi
+      echo -n "\"/lights${light}\""
+      n=$((n + 1))
+    done
+    echo
+  }
+
+  # Find "lightlist" resourcelink
+  # Usage: link=$(find_lightlist)
+  function find_lightlist() {
+    local link
+    local description
+
+    for link in $(ph_json_args=-al ph_get /resourcelinks | \
+                  grep '/name:\"homebridge-hue\"' | cut -d / -f 2) ; do
+      description="$(ph_unquote $(ph_get /resourcelinks/${link}/description))"
+      if [ "${description}" == "lightlist" ] ; then
+        echo -n "${link}"
+        return;
+      fi
+    done
+  }
+
+  local link="$(find_lightlist)"
+  if [ -z "${link}" ] ; then
+    local body='{
+      "name": "homebridge-hue",
+      "classid": 1,
+      "description": "lightlist",
+      "links": []
+    }'
+    link="$(ph_unquote $(ph_post /resourcelinks "${body}"))"
+  fi
+  local list="$(lightlist)"
+  ph_put /resourcelinks/${link} "{\"links\":[${list}]}"
+  _ph_info "/resourcelinks/${link}: $(echo "${list}" | wc -l) lights"
+}
+
 # ===== UTILITY FUNCTIONS ======================================================
 
 # Issue a HTTP command to the bridge and return response.
