@@ -66,7 +66,7 @@ function ph_get() {
     echo "${response}" | json ${ph_json_args}
     return 0
   fi
-  response=$(echo "${response}" | json ${ph_json_args} -p "${path}")
+  response=$(echo "${response}" | json ${ph_json_args} -p "/${path}")
   if [ -z "${response}" ] ; then
     _ph_error "'/${path}' not found in resource '/${resource}'"
     return 1
@@ -331,7 +331,7 @@ function ph_light_values() {
   local light="/lights/${1}"
   local state="${light}/state"
   local response
-  response=$(ph_get "/lights/${1}")
+  response=$(ph_json_args=-n ph_get "/lights/${1}")
   [ $? -eq 0 ] || return 1
 
   local manufacturer="$(json -c "${response}" -p /manufacturername)"
@@ -356,7 +356,7 @@ function ph_light_values() {
 
   local -i max=0
   local zero="0.0001"
-  local one="1.0000"
+  local one="0.9961"  # 65279 (0xfeff) / 65536
   if [ "${_ph_model}" == "deCONZ" ] ; then
     max=60
     zero="9.19132e-05"
