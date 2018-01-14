@@ -355,12 +355,13 @@ function ph_light_values() {
   local xy_blue
 
   local -i max=0
-  local zero="0.0001"
-  local one="0.9961"  # 65279 (0xfeff) / 65536
+  local zero="0.0001"     # smallest non-zero value report by Hue bridge
+  local one="0.9961"      # 65279 / 65536
   if [ "${_ph_model}" == "deCONZ" ] ; then
     max=60
-    zero="9.19132e-05"
-    one="1"
+    # Hack for deCONZ colour conversion bug
+    zero="0.0000153189"   # 1 / 65279
+    one="1"               # 65279 / 65279
   fi
 
   function ct_value() {
