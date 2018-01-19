@@ -63,10 +63,10 @@ function ph_get() {
   response=$(_ph_http GET "/${resource}")
   [ $? -eq 0 ] || return 1
   if [ -z "${path}" ] ; then
-    echo "${response}" | json ${ph_json_args}
+    json ${ph_json_args} -c "${response}"
     return 0
   fi
-  response=$(echo "${response}" | json ${ph_json_args} -p "/${path}")
+  response=$(json ${ph_json_args} -c "${response}" -p "/${path}")
   if [ -z "${response}" ] ; then
     _ph_error "'/${path}' not found in resource '/${resource}'"
     return 1
@@ -571,7 +571,7 @@ function _ph_http() {
   [ -z "${response}" ] && return 0
 
   # Check response body for errors.
-  responselines=$(echo "${response}" | json -al 2>/dev/null)
+  responselines=$(json -alc "${response}" 2>/dev/null)
   if [ $? -ne 0 -o "${response}" == '[]' ] ; then
     _ph_error "invalid method ${1} for resource ${2}"
     return 1
