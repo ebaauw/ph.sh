@@ -4,6 +4,19 @@
 # Copyright © 2017, 2018 Erik Baauw. All rights reserved.
 #
 # Create/configure rules on the Hue bridge or deCONZ gateway.
+#
+# Room Status:
+# -2  Wakeup
+# -1  Disabled
+# 0   No presence
+# 1   Presence
+# 2   Pending no presence
+# 3   Presence in adjacent room
+
+. ph.sh
+if [ $? -ne 0 ] ; then
+  _ph_error "cannot load ph.sh"
+fi
 
 # Usage: ph_rule name conditions actions
 function ph_rule() {
@@ -16,7 +29,8 @@ function ph_rule() {
     \"conditions\": ${conditions},
     \"actions\": ${actions}
   }"
-  local -i id=$(ph post "/rules" "${body}")
+  local response=$(ph post "/rules" "${body}")
+  local -i id=$(eval echo ${response})
   if [ ${id} -eq 0 ] ; then
     _ph_error "cannot create rule \"${name}\""
     json -c "${body}" >&2
@@ -34,7 +48,7 @@ function ph_rules_delete() {
   for rule in ${rules}; do
     ph delete /rules/${rule}
   done
-  [ "${_ph_model}" == "deCONZ" ] && ph_restart
+  ph_restart
 }
 
 # Usage: nrules=$(ph_rules_count)
@@ -301,7 +315,7 @@ function ph_action_scene_recall() {
 # Assuming the Hue bridge reboots because power has just been restored after a
 # power outage, we'll also turn off all lights at boot.
 
-# Usage: ph_rules_boottime boottime [night]
+# Usage: ph_rules_boottime boottime
 function ph_rules_boottime() {
   local -i boottime="${1}"
   local -i night="${2}"
@@ -317,13 +331,6 @@ function ph_rules_boottime() {
 
 # ===== Night and Day ==========================================================
 
-# deCONZ doesn't have a built-in Daylight sensor (yet?), so we simulate one
-# with a CLIPLightLevel sensor (lightlevel).  However, this sensor cannot be
-# set from HomeKit, so we use a CLIPGenericStatus sensor (daylight), which
-# is updated from Automations in the Home app (!) at Sunrise and Sunset.
-# For the Hue bridge, we still use the CLIPLightLevel sensor (lightlevel), but
-# now it is updated from the built-in Daylight sensor.
-
 # Usage: ph_rules_night night lightlevel daylight [morning evening]
 function ph_rules_night() {
   local -i night=${1}
@@ -332,33 +339,11 @@ function ph_rules_night() {
   local morning="${4:-07:00:00}"
   local evening="${5:-23:30:00}"
 
-  if [ "${_ph_model}" == "deCONZ" ] ; then
-    ph_rule "Daylight Off" "[
-      $(ph_condition_flag ${daylight} false)
-    ]" "[
-      $(ph_action_lightlevel ${lightlevel} 0)
-    ]"
-
-    ph_rule "Daylight On" "[
-      $(ph_condition_flag ${daylight})
-    ]" "[
-      $(ph_action_lightlevel ${lightlevel} 40000),
-      $(ph_action_flag ${night} false)
-    ]"
-  else
-    ph_rule "Daylight Off" "[
-      $(ph_condition_daylight ${daylight} false)
-    ]" "[
-      $(ph_action_lightlevel ${lightlevel} 0)
-    ]"
-
-    ph_rule "Daylight On" "[
-      $(ph_condition_daylight ${daylight})
-    ]" "[
-      $(ph_action_lightlevel ${lightlevel} 40000),
-      $(ph_action_flag ${night} false)
-    ]"
-  fi
+  ph_rule "Daylight On" "[
+    $(ph_condition_daylight ${daylight})
+  ]" "[
+    $(ph_action_flag ${night} false)
+  ]"
 
   ph_rule "Night On" "[
     $(ph_condition_localtime ${evening} ${morning})
@@ -545,19 +530,6 @@ function ph_rules_leave_room() {
   ]"
 }
 
-# Usage: ph_rules_motion_init room motion boottime
-function ph_rules_motion_init() {
-  local room="${1}"
-  local -i motion=${2}
-  local -i boottime=${3}
-
-  ph_rule "${room} Motion Init" "[
-    $(ph_condition_ddx ${boottime} "00:00:01")
-  ]" "[
-    $(ph_action_sensor_config "${motion}" '{"duration": 0}')
-  ]"
-}
-
 # ===== Door Sensors ===========================================================
 
 # Usage: ph_rules_room room status flag door [noclose]
@@ -699,15 +671,17 @@ function ph_rules_light() {
   ]"
 
   if [ -z "${7}" ] ; then
-    ph_rule "${room} On, Day" "[
+    ph_rule "${room} On, Dark, Day" "[
       $(ph_condition_flag ${flag}),
+      $(ph_condition_daylight 1 false),
       $(ph_condition_flag ${night} false)
     ]" "[
       $(ph_action_scene_recall ${group} ${default})
     ]"
 
-    ph_rule "${room} On, Night" "[
+    ph_rule "${room} On, Dark, Night" "[
       $(ph_condition_flag ${flag}),
+      $(ph_condition_daylight 1 false),
       $(ph_condition_flag ${night})
     ]" "[
       $(ph_action_scene_recall ${group} ${nightmode})
