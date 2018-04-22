@@ -56,16 +56,15 @@ function ph_sensors_init() {
 
   # Create dummy sensors for unused sensor slots.
   while true ; do
-    response=$(ph post /sensors '{
+    id=$(ph_unquote $(ph post /sensors '{
       "name": "_dummy",
       "type": "CLIPGenericFlag",
       "modelid": "_dummy",
       "manufacturername": "_dummy",
       "swversion": "0",
       "uniqueid": "_dummy"
-    }' 2>/dev/null)
+    }' 2>/dev/null))
     [ $? -eq 0 ] || break
-    id=$(eval echo ${response})
     _ph_info "/sensors/${id}: created dummy sensor"
   done
 
@@ -104,16 +103,15 @@ function _ph_sensor_clip()
 
   ph delete "/sensors/${1}" >/dev/null 2>&1
   ph_restart
-  response=$(ph post "/sensors" "{
+  id=$(ph_unquote $(ph post "/sensors" "{
     \"name\": \"${2}\",
     \"type\": \"${3}\",
     \"modelid\": \"${3}\",
     \"manufacturername\": \"homebridge-hue\",
     \"swversion\": \"${4:-0}\",
     \"uniqueid\": \"/sensors/${1}\"
-  }")
+  }"))
   [ $? -ne 0 ] && return 1
-  id=$(eval echo ${response})
   _ph_info "/sensors/${id}: ${3} \"${2}\""
   [ ${id} -ne ${1} ] && _ph_warn "/sensors/${id}: not requested id ${1}"
   echo ${id}
@@ -149,9 +147,7 @@ function ph_sensor_clip_presence() {
 # Create CLIPLightLevel sensor.
 # Usage: id=$(ph_sensor_clip_lightlevel id name [tholddark tholdoffset])
 function ph_sensor_clip_lightlevel() {
-  local -i id
-
-  id=$(_ph_sensor_clip "${1}" "${2}" CLIPLightLevel)
+  local -i id=$(_ph_sensor_clip "${1}" "${2}" CLIPLightLevel)
   [ $? -eq 0 ] || return 1
   ph put "/sensors/${id}/config" "{
     \"tholddark\": ${3:-12000},
@@ -189,17 +185,17 @@ function ph_sensor_clip_openclose() {
 function ph_sensor_multiclip() {
   ph delete "/resourcelinks/${1}" >/dev/null 2>&1
   local links="\"/sensors/${1}\""
-  local one="${1}"
+  local -i one="${1}"
   shift
   for i in "${@}" ; do
     links="${links}, \"/sensors/${i}\""
   done
-  id=$(ph post "/resourcelinks" "{
+  local -i id=$(ph_unquote $(ph post "/resourcelinks" "{
     \"name\": \"homebridge-hue\",
     \"description\": \"multiclip\",
     \"classid\": 1,
     \"links\": [${links}]
-  }")
+  }"))
   [ $? -ne 0 ] && return 1
   _ph_info "/resourcelinks/${id}: multiclip"
   [ ${id} -ne ${one} ] && _ph_warn "/resourcelinks/${id}: not requested id ${one}"
@@ -211,17 +207,17 @@ function ph_sensor_multiclip() {
 function ph_light_multilight() {
   ph delete "/resourcelinks/${1}" >/dev/null 2>&1
   local links="\"/lights/${1}\""
-  local one="${1}"
+  local -i one="${1}"
   shift
   for i in "${@}" ; do
     links="${links}, \"/lights/${i}\""
   done
-  id=$(ph post "/resourcelinks" "{
+  local -i id=$(ph_unquote $(ph post "/resourcelinks" "{
     \"name\": \"homebridge-hue\",
     \"description\": \"multilight\",
     \"classid\": 1,
     \"links\": [${links}]
-  }")
+  }"))
   [ $? -ne 0 ] && return 1
   _ph_info "/resourcelinks/${id}: multilight"
   [ ${id} -ne ${one} ] && _ph_warn "/resourcelinks/${id}: not requested id ${one}"
@@ -237,7 +233,7 @@ function ph_sensor_name() {
     \"name\": \"${2}\"
   }"
   [ $? -eq 0 ] || return 1
-  local type="$(ph_unquote "$(ph get "/sensors/${1}/type")")"
+  local type=$(ph_unquote $(ph get "/sensors/${1}/type"))
   _ph_info "/sensors/${1}: ${type} \"${2}\""
 }
 
@@ -254,11 +250,11 @@ function ph_sensor_presence() {
   }"
   [ $? -eq 0 ] || return 1
   if [ "${_ph_model}" != "deCONZ" ] ; then
-    id=$(ph post /resourcelinks "{
+    id=$(ph_unquote $(ph post /resourcelinks "{
       \"name\": \"${2}\",
       \"classid\": 10010,
       \"links\": [ \"/sensors/${1}\" ]
-    }")
+    }"))
     _ph_info "/resourcelinks/${id}: ${2}"
   fi
 }

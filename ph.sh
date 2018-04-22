@@ -82,9 +82,8 @@ function _ph_debug() {
   ${ph_debug} && _ph_msg debug "${@}"
 }
 
-_ph_model=$(ph get /config/modelid)
+_ph_model=$(ph_unquote $(ph get /config/modelid))
 [ $? -eq 0 ] || return 1
-_ph_model=$(eval echo ${_ph_model})
 
 function ph_restart() {
   [ "${_ph_model}" == "deCONZ" ] && ph -t 10 restart ${ph_verbose:+-v}

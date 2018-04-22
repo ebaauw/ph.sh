@@ -29,8 +29,7 @@ function ph_rule() {
     \"conditions\": ${conditions},
     \"actions\": ${actions}
   }"
-  local response=$(ph post "/rules" "${body}")
-  local -i id=$(eval echo ${response})
+  local -i id=$(ph_unquote $(ph post "/rules" "${body}"))
   if [ ${id} -eq 0 ] ; then
     _ph_error "cannot create rule \"${name}\""
     json -c "${body}" >&2
@@ -671,21 +670,89 @@ function ph_rules_light() {
   ]"
 
   if [ -z "${7}" ] ; then
-    ph_rule "${room} On, Dark, Day" "[
+    ph_rule "${room} On, Day" "[
       $(ph_condition_flag ${flag}),
-      $(ph_condition_daylight 1 false),
       $(ph_condition_flag ${night} false)
     ]" "[
       $(ph_action_scene_recall ${group} ${default})
     ]"
 
-    ph_rule "${room} On, Dark, Night" "[
+    ph_rule "${room} On, Night" "[
       $(ph_condition_flag ${flag}),
-      $(ph_condition_daylight 1 false),
       $(ph_condition_flag ${night})
     ]" "[
       $(ph_action_scene_recall ${group} ${nightmode})
     ]"
+
+    return
+  fi
+
+  local type=$(ph_unquote $(ph get "/sensors/${lightlevel}/type"))
+  if [ "${type}" == "Daylight" ] ; then
+    if [ "${_ph_model}" == "deCONZ" ] ; then
+      ph_rule "${room} On, Not Dark" "[
+        $(ph_condition_flag ${flag}),
+        $(ph_condition_status ${lightlevel} gt 125),
+        $(ph_condition_status ${lightlevel} lt 205)
+      ]" "[
+        $(ph_action_group_on ${group} false)
+      ]"
+
+      ph_rule "${room} On, Dark 1, Day" "[
+        $(ph_condition_flag ${flag}),
+        $(ph_condition_status ${lightlevel} lt 125),
+        $(ph_condition_flag ${night} false)
+      ]" "[
+        $(ph_action_scene_recall ${group} ${default})
+      ]"
+
+      ph_rule "${room} On, Dark 2, Day" "[
+        $(ph_condition_flag ${flag}),
+        $(ph_condition_status ${lightlevel} gt 205),
+        $(ph_condition_flag ${night} false)
+      ]" "[
+        $(ph_action_scene_recall ${group} ${default})
+      ]"
+
+      ph_rule "${room} On, Dark 1, Night" "[
+        $(ph_condition_flag ${flag}),
+        $(ph_condition_status ${lightlevel} lt 125),
+        $(ph_condition_flag ${night})
+      ]" "[
+        $(ph_action_scene_recall ${group} ${nightmode})
+      ]"
+
+      ph_rule "${room} On, Dark 2, Night" "[
+        $(ph_condition_flag ${flag}),
+        $(ph_condition_status ${lightlevel} gt 205),
+        $(ph_condition_flag ${night})
+      ]" "[
+        $(ph_action_scene_recall ${group} ${nightmode})
+      ]"
+    else
+      ph_rule "${room} On, Daylight" "[
+        $(ph_condition_flag ${flag}),
+        $(ph_condition_daylight ${lightlevel})
+      ]" "[
+        $(ph_action_group_on ${group} false)
+      ]"
+
+      ph_rule "${room} On, Not Daylight, Day" "[
+        $(ph_condition_flag ${flag}),
+        $(ph_condition_daylight ${lightlevel} false),
+        $(ph_condition_flag ${night} false)
+      ]" "[
+        $(ph_action_scene_recall ${group} ${default})
+      ]"
+
+      ph_rule "${room} On, Not Daylight, Night" "[
+        $(ph_condition_flag ${flag}),
+        $(ph_condition_daylight ${lightlevel} false),
+        $(ph_condition_flag ${night})
+      ]" "[
+        $(ph_action_scene_recall ${group} ${nightmode})
+      ]"
+    fi
   else
     ph_rule "${room} On, Daylight" "[
       $(ph_condition_flag ${flag}),
