@@ -356,6 +356,49 @@ function ph_rules_night() {
   ]"
 }
 
+# ===== Power Restore ==========================================================
+
+# Usage: ph_rules_power flag
+function ph_rules_power() {
+  local -i flag="${1}"
+
+  ph_rule "Power 1/5" "[
+    $(ph_condition_flag ${flag}),
+    $(ph_condition_dx ${flag})
+  ]" "[
+    $(ph_action_group_on 0 false)
+  ]"
+
+  ph_rule "Power 2/5" "[
+    $(ph_condition_flag ${flag}),
+    $(ph_condition_ddx ${flag} "00:00:02")
+  ]" "[
+    $(ph_action_group_on 0 false)
+  ]"
+
+  ph_rule "Power 3/5" "[
+    $(ph_condition_flag ${flag}),
+    $(ph_condition_ddx ${flag} "00:00:04")
+  ]" "[
+    $(ph_action_group_on 0 false)
+  ]"
+
+  ph_rule "Power 4/5" "[
+    $(ph_condition_flag ${flag}),
+    $(ph_condition_ddx ${flag} "00:00:06")
+  ]" "[
+    $(ph_action_group_on 0 false)
+  ]"
+
+  ph_rule "Power 5/5" "[
+    $(ph_condition_flag ${flag}),
+    $(ph_condition_ddx ${flag} "00:00:08")
+  ]" "[
+    $(ph_action_group_on 0 false),
+    $(ph_action_flag ${flag} false)
+  ]"
+}
+
 # ===== Room Status ============================================================
 
 # For each room, we keep a CLIPGenericFlag sensor (flag), as virtual master
