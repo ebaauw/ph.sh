@@ -338,8 +338,7 @@ function ph_rules_night() {
   local evening="${4:-23:30:00}"
 
   ph_rule "Daylight On" "[
-    $(ph_condition_daylight ${daylight}),
-    $(ph_condition_dx ${daylight})
+    $(ph_condition_daylight ${daylight})
   ]" "[
     $(ph_action_flag ${night} false)
   ]"
