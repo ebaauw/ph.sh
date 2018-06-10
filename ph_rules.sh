@@ -330,12 +330,13 @@ function ph_rules_boottime() {
 
 # ===== Night and Day ==========================================================
 
-# Usage: ph_rules_night night daylight [morning evening]
+# Usage: ph_rules_night boottime night [daylight [morning evening]]
 function ph_rules_night() {
-  local -i night=${1}
-  local -i daylight=${2:-1}
-  local morning="${3:-07:00:00}"
-  local evening="${4:-23:30:00}"
+  local -i boottime=${1}
+  local -i night=${2}
+  local -i daylight=${3:-1}
+  local morning="${4:-07:00:00}"
+  local evening="${5:-23:30:00}"
 
   ph_rule "Daylight On" "[
     $(ph_condition_daylight ${daylight})
@@ -344,12 +345,14 @@ function ph_rules_night() {
   ]"
 
   ph_rule "Night On" "[
+    $(ph_condition_flag ${boottime}),
     $(ph_condition_localtime ${evening} ${morning})
   ]" "[
     $(ph_action_flag ${night})
   ]"
 
   ph_rule "Night Off" "[
+    $(ph_condition_flag ${boottime}),
     $(ph_condition_localtime ${morning} ${evening})
   ]" "[
     $(ph_action_flag ${night} false)
@@ -846,7 +849,14 @@ function ph_rules_fan() {
   ]"
 
   ph_rule "${room} Hot" "[
+    $(ph_condition_temperature ${temperature} gt 2300)
+  ]" "[
+    $(ph_action_light_on ${fan})
+  ]"
+
+  ph_rule "${room} On, Hot" "[
     $(ph_condition_flag ${flag}),
+    $(ph_condition_ddx ${flag} "00:00:15")
     $(ph_condition_temperature ${temperature} gt 2300)
   ]" "[
     $(ph_action_light_on ${fan})
