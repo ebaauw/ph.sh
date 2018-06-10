@@ -856,7 +856,7 @@ function ph_rules_fan() {
 
   ph_rule "${room} On, Hot" "[
     $(ph_condition_flag ${flag}),
-    $(ph_condition_ddx ${flag} "00:00:15")
+    $(ph_condition_ddx ${flag} "00:00:15"),
     $(ph_condition_temperature ${temperature} gt 2300)
   ]" "[
     $(ph_action_light_on ${fan})
