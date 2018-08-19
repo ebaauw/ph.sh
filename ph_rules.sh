@@ -842,21 +842,20 @@ function ph_rules_fan() {
   local -i fan=${3}
   local -i temperature=${4}
 
+  ph_rule "${room} Off" "[
+    $(ph_condition_flag ${flag} false)
+  ]" "[
+    $(ph_action_light_on ${fan} false)
+  ]"
+
   ph_rule "${room} Cool" "[
-  $(ph_condition_temperature ${temperature} lt 2250)
+    $(ph_condition_temperature ${temperature} lt 2250)
   ]" "[
     $(ph_action_light_on ${fan} false)
   ]"
 
   ph_rule "${room} Hot" "[
-    $(ph_condition_temperature ${temperature} gt 2300)
-  ]" "[
-    $(ph_action_light_on ${fan})
-  ]"
-
-  ph_rule "${room} On, Hot" "[
     $(ph_condition_flag ${flag}),
-    $(ph_condition_ddx ${flag} "00:00:15"),
     $(ph_condition_temperature ${temperature} gt 2300)
   ]" "[
     $(ph_action_light_on ${fan})
