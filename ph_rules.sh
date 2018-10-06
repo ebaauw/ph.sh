@@ -312,20 +312,30 @@ function ph_action_scene_recall() {
 # change boottime afterwards, it's state.lastupdated attribute reflects boot
 # time.
 # Assuming the Hue bridge reboots because power has just been restored after a
-# power outage, we'll also turn off all lights at boot.
+# power outage, we'll also set the power restored flag turn off all lights.
 
-# Usage: ph_rules_boottime boottime [daylight]
+# Usage: ph_rules_boottime boottime [flag] [daylight]
 function ph_rules_boottime() {
   local -i boottime="${1}"
-  local -i daylight="${2:-1}"
+  local -i flag="${2}"
+  local -i daylight="${3:-1}"
 
-  ph_rule "Boot Time" "[
-    $(ph_condition_dx ${daylight}),
-    $(ph_condition_flag ${boottime} false)
-  ]" "[
-    $(ph_action_flag ${boottime}),
-    $(ph_action_group_on 0 false)
-  ]"
+  if [ -z "${2}" ] ; then
+    ph_rule "Boot Time" "[
+      $(ph_condition_dx ${daylight}),
+      $(ph_condition_flag ${boottime} false)
+    ]" "[
+      $(ph_action_flag ${boottime})
+    ]"
+  else
+    ph_rule "Boot Time" "[
+      $(ph_condition_dx ${daylight}),
+      $(ph_condition_flag ${boottime} false)
+    ]" "[
+      $(ph_action_flag ${boottime}),
+      $(ph_action_flag ${flag})
+    ]"
+  fi
 }
 
 # ===== Night and Day ==========================================================
@@ -362,6 +372,7 @@ function ph_rules_night() {
 # ===== Power Restore ==========================================================
 
 # Usage: ph_rules_power flag
+# Flag is true when power has been restored.
 function ph_rules_power() {
   local -i flag="${1}"
 
