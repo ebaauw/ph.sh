@@ -29,7 +29,7 @@ function ph_rule() {
     \"conditions\": ${conditions},
     \"actions\": ${actions}
   }"
-  local -i id=$(ph_unquote $(ph post "/rules" "${body}"))
+  local -i id=$(ph_unquote $(ph -t 10 post "/rules" "${body}"))
   if [ ${id} -eq 0 ] ; then
     _ph_error "cannot create rule \"${name}\""
     json -c "${body}" >&2
@@ -346,7 +346,7 @@ function ph_rules_night() {
   local -i night=${2}
   local -i daylight=${3:-1}
   local morning="${4:-07:00:00}"
-  local evening="${5:-23:30:00}"
+  local evening="${5:-23:00:00}"
 
   ph_rule "Daylight On" "[
     $(ph_condition_daylight ${daylight})
@@ -870,5 +870,46 @@ function ph_rules_fan() {
     $(ph_condition_temperature ${temperature} gt 2300)
   ]" "[
     $(ph_action_light_on ${fan})
+  ]"
+}
+
+# ===== Curtains ===============================================================
+
+# Usage: ph_rules_curtains room status curtains temperature [daylight]
+function ph_rules_curtains() {
+  local room="${1}"
+  local -i status=${2}
+  local -i curtains=${3}
+  local -i temperature=${4}
+  local -i daylight="${5:-1}"
+
+  ph_rule "${room} Sunset" "[
+    $(ph_condition_status ${status} gt -1),
+    $(ph_condition_dark ${daylight})
+  ]" "[
+    $(ph_action_light_on ${curtains})
+  ]"
+
+  ph_rule "${room} Sunrise" "[
+    $(ph_condition_status ${status} gt -1),
+    $(ph_condition_daylight ${daylight})
+  ]" "[
+    $(ph_action_light_on ${curtains} false)
+  ]"
+
+  ph_rule "${room} Cool, Daylight" "[
+    $(ph_condition_temperature ${temperature} lt 2250),
+    $(ph_condition_daylight ${daylight})
+  ]" "[
+    $(ph_action_light_on ${curtains} false)
+  ]"
+
+  # TODO: change time to lightlevel when sun shines into room
+  ph_rule "${room} Hot, Daylight" "[
+    $(ph_condition_temperature ${temperature} gt 2300),
+    $(ph_condition_daylight ${daylight}),
+    $(ph_condition_localtime "13:00:00" "23:00:00")
+  ]" "[
+    $(ph_action_light_on ${curtains})
   ]"
 }
