@@ -361,12 +361,12 @@ function ph_rules_night() {
     $(ph_action_flag ${night})
   ]"
 
-  ph_rule "Night Off" "[
-    $(ph_condition_flag ${boottime}),
-    $(ph_condition_localtime ${morning} ${evening})
-  ]" "[
-    $(ph_action_flag ${night} false)
-  ]"
+  # ph_rule "Night Off" "[
+  #   $(ph_condition_flag ${boottime}),
+  #   $(ph_condition_localtime ${morning} ${evening})
+  # ]" "[
+  #   $(ph_action_flag ${night} false)
+  # ]"
 }
 
 # ===== Power Restore ==========================================================
