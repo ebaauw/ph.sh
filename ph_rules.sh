@@ -875,6 +875,11 @@ function ph_rules_fan() {
 
 # ===== Curtains ===============================================================
 
+# TODO:
+# - Change way of detecting room is too hot because of sun shining into it;
+# - Prevent motion sensor from turning on room when curtains close.  Probably
+#   need an additional status or flag for that.
+
 # Usage: ph_rules_curtains room status curtains temperature [daylight]
 function ph_rules_curtains() {
   local room="${1}"
@@ -884,7 +889,6 @@ function ph_rules_curtains() {
   local -i daylight="${5:-1}"
 
   ph_rule "${room} Sunset" "[
-    $(ph_condition_status ${status} gt -1),
     $(ph_condition_dark ${daylight})
   ]" "[
     $(ph_action_light_on ${curtains})
@@ -897,9 +901,11 @@ function ph_rules_curtains() {
     $(ph_action_light_on ${curtains} false)
   ]"
 
+  # TODO: change time to lightlevel when sun shines into room
   ph_rule "${room} Cool, Daylight" "[
     $(ph_condition_temperature ${temperature} lt 2250),
-    $(ph_condition_daylight ${daylight})
+    $(ph_condition_daylight ${daylight}),
+    $(ph_condition_localtime "13:00:00" "23:00:00")
   ]" "[
     $(ph_action_light_on ${curtains} false)
   ]"
