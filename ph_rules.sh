@@ -919,3 +919,32 @@ function ph_rules_curtains() {
     $(ph_action_light_on ${curtains})
   ]"
 }
+
+# ===== TV =====================================================================
+
+# TODO:
+# - Change rule "${room} Off" in ph_rule_lights to add condition that
+#   status gt -2
+
+# Usage: ph_rules_tv room status group tv lightlevel
+function ph_rules_tv() {
+  local room="${1}"
+  local -i status=${2}
+  local -i group=${3}
+  local tv="${4}"
+  local -i lightlevel=${5}
+
+  ph_rule "${room} TV On, Daylight" "[
+    $(ph_condition_status ${status} -2),
+    $(ph_condition_daylight ${lightlevel})
+  ]" "[
+    $(ph_action_group_on ${group} false)
+  ]"
+
+  ph_rule "${room} TV On, Dark" "[
+    $(ph_condition_status ${status} -2),
+    $(ph_condition_dark ${lightlevel})
+  ]" "[
+    $(ph_action_scene_recall ${group} ${tv})
+  ]"
+}
