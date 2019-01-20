@@ -895,7 +895,7 @@ function ph_rules_curtains() {
   ]"
 
   ph_rule "${room} Sunrise" "[
-    $(ph_condition_status ${status} gt -2),
+    $(ph_condition_status ${status} gt -1),
     $(ph_condition_daylight ${daylight})
   ]" "[
     $(ph_action_light_on ${curtains} false)
