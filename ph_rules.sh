@@ -307,8 +307,8 @@ function ph_action_scene_recall() {
 
 # On startup, all CLIP sensors are initialised to 0.  Then the Hue bridge
 # updates the built-in Daylight sensor.  We can use this to detect that the
-# Hue bridge has booted.  We keep a CLIPGenericStatus sensor (boottime) which
-# is set to 1 when the Daylight sensor changes while boottime is 0.  As we never
+# Hue bridge has booted.  We keep a CLIPGenericFlag sensor (boottime) which is
+# set to true when the Daylight sensor changes while boottime is 0.  As we never
 # change boottime afterwards, it's state.lastupdated attribute reflects boot
 # time.
 # Assuming the Hue bridge reboots because power has just been restored after a
@@ -371,44 +371,45 @@ function ph_rules_night() {
 
 # ===== Power Restore ==========================================================
 
-# Usage: ph_rules_power flag
+# Usage: ph_rules_power flag [group]
 # Flag is true when power has been restored.
 function ph_rules_power() {
   local -i flag="${1}"
+  local -i group="${2:-0}"
 
   ph_rule "Power 1/5" "[
     $(ph_condition_flag ${flag}),
     $(ph_condition_dx ${flag})
   ]" "[
-    $(ph_action_group_on 0 false)
+    $(ph_action_group_on ${group} false)
   ]"
 
   ph_rule "Power 2/5" "[
     $(ph_condition_flag ${flag}),
     $(ph_condition_ddx ${flag} "00:00:02")
   ]" "[
-    $(ph_action_group_on 0 false)
+    $(ph_action_group_on ${group} false)
   ]"
 
   ph_rule "Power 3/5" "[
     $(ph_condition_flag ${flag}),
     $(ph_condition_ddx ${flag} "00:00:04")
   ]" "[
-    $(ph_action_group_on 0 false)
+    $(ph_action_group_on ${group} false)
   ]"
 
   ph_rule "Power 4/5" "[
     $(ph_condition_flag ${flag}),
     $(ph_condition_ddx ${flag} "00:00:06")
   ]" "[
-    $(ph_action_group_on 0 false)
+    $(ph_action_group_on ${group} false)
   ]"
 
   ph_rule "Power 5/5" "[
     $(ph_condition_flag ${flag}),
     $(ph_condition_ddx ${flag} "00:00:08")
   ]" "[
-    $(ph_action_group_on 0 false),
+    $(ph_action_group_on ${group} false),
     $(ph_action_flag ${flag} false)
   ]"
 }
