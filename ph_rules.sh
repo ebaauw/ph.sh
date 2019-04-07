@@ -87,6 +87,11 @@ function ph_condition_sensor() {
   ph_condition "/sensors/${1}/state/${2}" "${3}" "${4}"
 }
 
+# Usage: condition="$(ph_condition_sensor_config id attribute [[operator] value | 'dx'])"
+function ph_condition_sensor_config() {
+  ph_condition "/sensors/${1}/config/${2}" "${3}" "${4}"
+}
+
 # Usage: condition="$(ph_condition_light id attribute [[operator] value | 'dx'])"
 function ph_condition_light() {
   ph_condition "/lights/${1}/state/${2}" "${3}" "${4}"
@@ -252,11 +257,6 @@ function ph_action_status() {
   ph_action_sensor_state "${1}" "{\"status\": ${2}}"
 }
 
-# Usage: action="$(ph_action_lightlevel sensor value)"
-function ph_action_lightlevel() {
-  ph_action_sensor_state "${1}" "{\"lightlevel\": ${2}}"
-}
-
 # Usage: action="$(ph_action_light_on light [value])"
 function ph_action_light_on() {
   ph_action_light_state  "${1}" "{\"on\": ${2:-true}}"
@@ -275,6 +275,11 @@ function ph_action_group_alert() {
 # Usage: action="$(ph_action_sensor_alert sensor [value])"
 function ph_action_sensor_alert() {
   ph_action_sensor_config "${1}" "{\"alert\": \"${2:-select}\"}"
+}
+
+# Usage: action=$(ph_action_heatsetpoint sensor value)
+function ph_action_heatsetpoint() {
+  ph_action_sensor_config "${1}" "{\"heatsetpoint\": ${2}}"
 }
 
 # Usage: action="$(ph_action_light_dim group [up|down|stop|wakeup])"
@@ -947,5 +952,98 @@ function ph_rules_tv() {
     $(ph_condition_dark ${lightlevel})
   ]" "[
     $(ph_action_scene_recall ${group} ${tv})
+  ]"
+}
+
+# ===== Thermostat =============================================================
+
+# Usage: ph_rules_thermo_display room thermostat
+function ph_rules_thermo_display() {
+  local room="${1}"
+  local -i thermostat=${2}
+
+  ph_rule "${room} Thermostat Display" "[
+    $(ph_condition_sensor_config ${thermostat} displayflipped false)
+  ]" "[
+    $(ph_action_sensor_config ${thermostat} '{"displayflipped": true}')
+  ]"
+}
+
+# Usage: ph_rules_thermo_display room thermostat flag [high [low]]
+function ph_rules_thermo_home() {
+  local room="${1}"
+  local -i thermostat=${2}
+  local -i flag=${3}
+  local -i high=${4:-2100}
+  local -i low=${5:-1500}
+
+  ph_rule "${room} Away" "[
+    $(ph_condition_flag ${flag} false),
+    $(ph_condition_ddx ${flag} "00:05:00")
+  ]" "[
+    $(ph_action_heatsetpoint ${thermostat} ${low})
+  ]"
+
+  ph_rule "${room} Home" "[
+    $(ph_condition_flag ${flag}),
+    $(ph_condition_ddx ${flag} "00:05:00")
+  ]" "[
+    $(ph_action_heatsetpoint ${thermostat} ${high})
+  ]"
+}
+
+# Usage: ph_rules_thermo_night room thermostat flag status [high [low]]
+function ph_rules_thermo_night() {
+  local room="${1}"
+  local -i thermostat=${2}
+  local -i night=${3}
+  local -i status=${4}
+  local -i high=${5:-2100}
+  local -i low=${6:-1500}
+
+  ph_rule "${room} Night On" "[
+    $(ph_condition_flag ${night}),
+    $(ph_condition_ddx ${night} "00:05:00")
+  ]" "[
+    $(ph_action_heatsetpoint ${thermostat} ${low})
+  ]"
+
+  ph_rule "${room} Night Off" "[
+    $(ph_condition_status ${status} -2),
+    $(ph_condition_ddx ${status} status "00:10:10")
+  ]" "[
+    $(ph_action_heatsetpoint ${thermostat} ${high})
+  ]"
+}
+
+# Usage: ph_rules_thermo_night room thermostat [high [low]]
+function ph_rules_thermo_day() {
+  local room="${1}"
+  local -i thermostat=${2}
+  local -i high=${3:-2100}
+  local -i low=${4:-1500}
+
+  ph_rule "${room} Night On, Week" "[
+  $(ph_condition_config localtime in "W120/T21:00:00/T08:00:00")
+  ]" "[
+    $(ph_action_heatsetpoint ${thermostat} ${high})
+  ]"
+
+  ph_rule "${room} Night Off, Week" "[
+    $(ph_condition_config localtime in "W120/T08:00:00/T21:00:00")
+  ]" "[
+    $(ph_action_heatsetpoint ${thermostat} ${low})
+  ]"
+
+  ph_rule "${room} Night On, Weekend" "[
+  $(ph_condition_config localtime in "W7/T21:00:00/T09:00:00")
+  ]" "[
+    $(ph_action_heatsetpoint ${thermostat} ${high})
+  ]"
+
+  ph_rule "${room} Night Off, Weekend" "[
+  $(ph_condition_config localtime in "W7/T09:00:00/T21:00:00")
+  ]" "[
+    $(ph_action_heatsetpoint ${thermostat} ${low})
   ]"
 }
