@@ -969,7 +969,7 @@ function ph_rules_thermo_display() {
   ]"
 }
 
-# Usage: ph_rules_thermo_display room thermostat flag [high [low]]
+# Usage: ph_rules_thermo_home room thermostat flag [high [low]]
 function ph_rules_thermo_home() {
   local room="${1}"
   local -i thermostat=${2}
