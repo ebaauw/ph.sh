@@ -902,7 +902,8 @@ function ph_rules_curtains() {
 
   ph_rule "${room} Sunrise" "[
     $(ph_condition_status ${status} gt -1),
-    $(ph_condition_daylight ${daylight})
+    $(ph_condition_daylight ${daylight}),
+    $(ph_condition_localtime "23:00:00" "13:00:00")
   ]" "[
     $(ph_action_light_on ${curtains} false)
   ]"
