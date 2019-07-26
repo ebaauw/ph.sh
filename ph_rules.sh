@@ -12,6 +12,7 @@
 # 1   Presence
 # 2   Pending no presence
 # 3   Presence in adjacent room
+# 4   TV
 
 . ph.sh
 if [ $? -ne 0 ] ; then
@@ -561,7 +562,8 @@ function ph_rules_motion() {
     ph_rule "${room} Motion Clear" "[
       $(ph_condition_motion ${motion} false),
       $(ph_condition_ddx ${motion} presence ${timeout}),
-      $(ph_condition_status ${status} gt -1)
+      $(ph_condition_status ${status} gt -1),
+      $(ph_condition_status ${status} lt 4)
     ]" "[
       $(ph_action_status ${status} 0)
     ]"
@@ -569,7 +571,8 @@ function ph_rules_motion() {
   ph_rule "${room} Motion Detected" "[
     $(ph_condition_motion ${motion}),
     $(ph_condition_dx ${motion} presence),
-    $(ph_condition_status ${status} gt -1)
+    $(ph_condition_status ${status} gt -1),
+    $(ph_condition_status ${status} lt 4)
   ]" "[
     $(ph_action_status ${status} 1)
   ]"
@@ -715,7 +718,7 @@ function ph_rules_dimmer_updown() {
 
 # ===== Lights =================================================================
 
-# Usage: ph_rules_light room flag group night default nightmode [lightlevel]
+# Usage: ph_rules_light room flag group night default nightmode [lightlevel [status tv]]
 function ph_rules_light() {
   local room="${1}"
   local -i flag=${2}
@@ -724,6 +727,8 @@ function ph_rules_light() {
   local default="${5}"
   local nightmode="${6}"
   local -i lightlevel=${7}
+  local -i status=${8}
+  local tv="${9}"
 
   ph_rule "${room} Off" "[
     $(ph_condition_flag ${flag} false)
@@ -752,6 +757,7 @@ function ph_rules_light() {
   local type=$(ph_unquote $(ph get "/sensors/${lightlevel}/type"))
   if [ "${type}" == "Daylight" ] ; then
     if [ "${_ph_model}" == "deCONZ" ] ; then
+      # lightlevel is Daylight sensor on deCONZ gateway
       ph_rule "${room} On, Not Dark" "[
         $(ph_condition_flag ${flag}),
         $(ph_condition_status ${lightlevel} gt 125),
@@ -792,6 +798,7 @@ function ph_rules_light() {
         $(ph_action_scene_recall ${group} ${nightmode})
       ]"
     else
+      # lightlevel is Daylight sensor on Hue bridge
       ph_rule "${room} On, Daylight" "[
         $(ph_condition_flag ${flag}),
         $(ph_condition_daylight ${lightlevel})
@@ -816,6 +823,7 @@ function ph_rules_light() {
       ]"
     fi
   else
+    # lightlevel is a ZHALightLevel sensor
     ph_rule "${room} On, Daylight" "[
       $(ph_condition_flag ${flag}),
       $(ph_condition_daylight ${lightlevel})
@@ -823,13 +831,43 @@ function ph_rules_light() {
       $(ph_action_group_on ${group} false)
     ]"
 
-    ph_rule "${room} On, Dark, Day" "[
-      $(ph_condition_flag ${flag}),
-      $(ph_condition_dark ${lightlevel}),
-      $(ph_condition_flag ${night} false)
-    ]" "[
-      $(ph_action_scene_recall ${group} ${default})
-    ]"
+    if [ -z "${8}" ] ; then
+      ph_rule "${room} On, Dark, Day" "[
+        $(ph_condition_flag ${flag}),
+        $(ph_condition_dark ${lightlevel}),
+        $(ph_condition_flag ${night} false)
+      ]" "[
+        $(ph_action_scene_recall ${group} ${default})
+      ]"
+    else
+      ph_rule "${room} On, TV Off, Dark, Day" "[
+        $(ph_condition_flag ${flag}),
+        $(ph_condition_status ${status} lt 4),
+        $(ph_condition_dark ${lightlevel}),
+        $(ph_condition_flag ${night} false)
+      ]" "[
+        $(ph_action_scene_recall ${group} ${default})
+      ]"
+
+      ph_rule "${room} On, TV On, Dark, Day" "[
+        $(ph_condition_flag ${flag}),
+        $(ph_condition_status ${status} 4),
+        $(ph_condition_dark ${lightlevel}),
+        $(ph_condition_flag ${night} false)
+      ]" "[
+        $(ph_action_scene_recall ${group} ${tv})
+      ]"
+
+      ph_rule "${room} On, TV On, Not Daylight, Day" "[
+        $(ph_condition_flag ${flag}),
+        $(ph_condition_status ${status} 4),
+        $(ph_condition_dx ${status} status),
+        $(ph_condition_daylight ${lightlevel} false),
+        $(ph_condition_flag ${night} false)
+      ]" "[
+        $(ph_action_scene_recall ${group} ${tv})
+      ]"
+    fi
 
     ph_rule "${room} On, Dark, Night" "[
       $(ph_condition_flag ${flag}),
@@ -924,35 +962,6 @@ function ph_rules_curtains() {
     $(ph_condition_localtime "13:00:00" "23:00:00")
   ]" "[
     $(ph_action_light_on ${curtains})
-  ]"
-}
-
-# ===== TV =====================================================================
-
-# TODO:
-# - Change rule "${room} Off" in ph_rule_lights to add condition that
-#   status gt -2
-
-# Usage: ph_rules_tv room status group tv lightlevel
-function ph_rules_tv() {
-  local room="${1}"
-  local -i status=${2}
-  local -i group=${3}
-  local tv="${4}"
-  local -i lightlevel=${5}
-
-  ph_rule "${room} TV On, Daylight" "[
-    $(ph_condition_status ${status} -2),
-    $(ph_condition_daylight ${lightlevel})
-  ]" "[
-    $(ph_action_group_on ${group} false)
-  ]"
-
-  ph_rule "${room} TV On, Dark" "[
-    $(ph_condition_status ${status} -2),
-    $(ph_condition_dark ${lightlevel})
-  ]" "[
-    $(ph_action_scene_recall ${group} ${tv})
   ]"
 }
 
