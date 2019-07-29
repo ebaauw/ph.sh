@@ -558,6 +558,14 @@ function ph_rules_motion() {
     ]" "[
       $(ph_action_status ${status} 3)
     ]"
+    ph_rule "${room} No Motion" "[
+      $(ph_condition_motion ${motion} false),
+      $(ph_condition_ddx ${motion} presence "00:55:00"),
+      $(ph_condition_status ${status} gt -1),
+      $(ph_condition_status ${status} lt 4)
+    ]" "[
+      $(ph_action_status ${status} 3)
+    ]"
   else
     ph_rule "${room} Motion Clear" "[
       $(ph_condition_motion ${motion} false),
