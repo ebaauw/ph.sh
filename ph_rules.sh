@@ -1028,13 +1028,13 @@ function ph_rules_thermo_night() {
 
   ph_rule "${room} Night Off" "[
     $(ph_condition_status ${status} -2),
-    $(ph_condition_ddx ${status} status "00:10:10")
+    $(ph_condition_ddx ${status} status "00:10:00")
   ]" "[
     $(ph_action_heatsetpoint ${thermostat} ${high})
   ]"
 }
 
-# Usage: ph_rules_thermo_night room thermostat [high [low]]
+# Usage: ph_rules_thermo_day room thermostat [high [low]]
 function ph_rules_thermo_day() {
   local room="${1}"
   local -i thermostat=${2}
