@@ -1010,8 +1010,8 @@ function ph_rules_thermo_home() {
   ]"
 }
 
-# Usage: ph_rules_thermo_night room thermostat flag status [high [low]]
-function ph_rules_thermo_night() {
+# Usage: ph_rules_thermo_day room thermostat flag status [high [low]]
+function ph_rules_thermo_day() {
   local room="${1}"
   local -i thermostat=${2}
   local -i night=${3}
@@ -1026,7 +1026,7 @@ function ph_rules_thermo_night() {
     $(ph_action_heatsetpoint ${thermostat} ${low})
   ]"
 
-  ph_rule "${room} Night Off" "[
+  ph_rule "${room} Wakeup 3/3" "[
     $(ph_condition_status ${status} -2),
     $(ph_condition_ddx ${status} status "00:10:00")
   ]" "[
@@ -1034,15 +1034,15 @@ function ph_rules_thermo_night() {
   ]"
 }
 
-# Usage: ph_rules_thermo_day room thermostat [high [low]]
-function ph_rules_thermo_day() {
+# Usage: ph_rules_thermo_night room thermostat [high [low]]
+function ph_rules_thermo_night() {
   local room="${1}"
   local -i thermostat=${2}
   local -i high=${3:-2100}
   local -i low=${4:-1500}
 
   ph_rule "${room} Night On, Week" "[
-  $(ph_condition_config localtime in "W120/T21:00:00/T08:00:00")
+    $(ph_condition_config localtime in "W120/T21:00:00/T08:00:00")
   ]" "[
     $(ph_action_heatsetpoint ${thermostat} ${high})
   ]"
@@ -1054,13 +1054,13 @@ function ph_rules_thermo_day() {
   ]"
 
   ph_rule "${room} Night On, Weekend" "[
-  $(ph_condition_config localtime in "W7/T21:00:00/T09:00:00")
+    $(ph_condition_config localtime in "W7/T21:00:00/T09:00:00")
   ]" "[
     $(ph_action_heatsetpoint ${thermostat} ${high})
   ]"
 
   ph_rule "${room} Night Off, Weekend" "[
-  $(ph_condition_config localtime in "W7/T09:00:00/T21:00:00")
+    $(ph_condition_config localtime in "W7/T09:00:00/T21:00:00")
   ]" "[
     $(ph_action_heatsetpoint ${thermostat} ${low})
   ]"
