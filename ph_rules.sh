@@ -263,6 +263,11 @@ function ph_action_light_on() {
   ph_action_light_state  "${1}" "{\"on\": ${2:-true}}"
 }
 
+# Usage: action="$(ph_action_light_bri light [value])"
+function ph_action_light_bri() {
+  ph_action_light_state  "${1}" "{\"bri\": ${2:-254}}"
+}
+
 # Usage: condition="$(ph_action_group_on group [value])"
 function ph_action_group_on() {
   ph_action_group_action  "${1}" "{\"on\": ${2:-true}}"
@@ -943,7 +948,7 @@ function ph_rules_curtains() {
   ph_rule "${room} Sunset" "[
     $(ph_condition_dark ${daylight})
   ]" "[
-    $(ph_action_light_on ${curtains})
+    $(ph_action_light_bri ${curtains})
   ]"
 
   ph_rule "${room} Sunrise" "[
@@ -951,7 +956,7 @@ function ph_rules_curtains() {
     $(ph_condition_daylight ${daylight}),
     $(ph_condition_localtime "23:00:00" "13:00:00")
   ]" "[
-    $(ph_action_light_on ${curtains} false)
+    $(ph_action_light_bri ${curtains} 0)
   ]"
 
   # TODO: change time to lightlevel when sun shines into room
@@ -960,7 +965,7 @@ function ph_rules_curtains() {
     $(ph_condition_daylight ${daylight}),
     $(ph_condition_localtime "13:00:00" "23:00:00")
   ]" "[
-    $(ph_action_light_on ${curtains} false)
+    $(ph_action_light_bri ${curtains} 0)
   ]"
 
   # TODO: change time to lightlevel when sun shines into room
@@ -969,7 +974,7 @@ function ph_rules_curtains() {
     $(ph_condition_daylight ${daylight}),
     $(ph_condition_localtime "13:00:00" "23:00:00")
   ]" "[
-    $(ph_action_light_on ${curtains})
+    $(ph_action_light_bri ${curtains})
   ]"
 }
 
