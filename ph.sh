@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # ph.sh
-# Copyright © 2017, 2018 Erik Baauw. All rights reserved.
+# Copyright © 2017-2020 Erik Baauw. All rights reserved.
 #
 # Shell library for interacting with a Philips Hue or compatible bridge using
 # the Philips Hue or compatible REST API.
