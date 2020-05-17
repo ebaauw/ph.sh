@@ -1,9 +1,16 @@
 # ph.sh
 
-## Shell commands for Philips Hue
+## Shell commands for Philips Hue and deCONZ
 Copyright © 2017-2020 Erik Baauw. All rights reserved.
 
 ### Notice
-This repository has been deprecated.  NodeJS versions of `ph.sh` and `json.sh` are included in [homebridge-hue](https://github.com/ebaauw/homebridge-hue).  They can also be installed separately from [homebridge-hue-utils](https://github.com/ebaauw/homebridge-hue-utils).
+Most of this repository has been deprecated.  NodeJS versions of `ph.sh` and `json.sh` are included in [homebridge-hue](https://github.com/ebaauw/homebridge-hue) and
+[homebridge-lib](https://github.com/ebaauw/homebridge-lib) respectively.
 
-This repository now only contains the `ph_rules.sh` and `ph_sensors.sh` scripts, which have not yet been converted to NodeJS.
+This repository now only contains some shell scripts, that aren't yet, or won't be, converted to NodeJS:
+
+Script | Description
+------ | -----------
+`ph_sensors.sh` | Defines shell functions for creating and maintaining CLIP sensors.
+`ph_rules.sh` | Defines shell functions for creating and maintaining rules.
+`ph_keepalive.command` | Update the room status when macOS user has been active recently.
