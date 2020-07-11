@@ -21,7 +21,7 @@ if [ ${idleTime} -gt ${IDLE_TIME} ] ; then
   exit 0
 fi
 
-if [ ${status} -lt 0 -a ${status} -gt 3 ] ; then
+if [ ${status} -lt 0 -o ${status} -gt 3 ] ; then
   echo "$(date): status: ${status} - automated room update disabled"
   exit 0
 fi
