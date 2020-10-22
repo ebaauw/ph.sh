@@ -324,6 +324,27 @@ function ph_action_scene_recall() {
   fi
 }
 
+# ===== Mirror =================================================================
+
+# ph_rules_mirror name flag host apikey
+function ph_rules_mirror() {
+  local name="${1}"
+  local -i flag="${2}"
+  local host="${3}"
+  local apikey = "${4}"
+
+  ph_rule "Mirror ${name} Off" "[
+    $(ph_condition_flag ${flag} false)
+  ]" "[
+    $(ph_action http://${host}/api/${apikey}/sensors/${flag}/state PUT '{"flag": false}')
+  ]"
+  ph_rule "Mirror ${name} On" "[
+    $(ph_condition_flag ${flag})
+  ]" "[
+    $(ph_action http://${host}/api/${apikey}/sensors/${flag}/state PUT '{"flag": true}')
+  ]"
+}
+
 # ===== Boot ===================================================================
 
 # On startup, all CLIP sensors are initialised to 0.  Then the Hue bridge
