@@ -147,6 +147,11 @@ function ph_condition_motion() {
   ph_condition_sensor "${1}" presence eq "${2:-true}"
 }
 
+# Usage: condition="$(ph_condition_vibration sensor [value])"
+function ph_condition_vibration() {
+  ph_condition_sensor "${1}" vibration eq "${2:-true}"
+}
+
 # Usage: condition="$(ph_condition_dark sensor [value])"
 function ph_condition_dark() {
   ph_condition_sensor "${1}" dark eq "${2:-true}"
@@ -615,6 +620,24 @@ function ph_rules_motion() {
   ph_rule "${room} Motion Detected" "[
     $(ph_condition_motion ${motion}),
     $(ph_condition_dx ${motion} presence),
+    $(ph_condition_status ${status} gt -1),
+    $(ph_condition_status ${status} lt 4)
+  ]" "[
+    $(ph_action_status ${status} 1)
+  ]"
+}
+
+# Usage: ph_rules_vibration room status flag vibration [timeout]
+function ph_rules_vibration() {
+  local room="${1}"
+  local -i status=${2}
+  local -i flag=${3}
+  local -i vibration=${4}
+  local timeout=${5}
+
+  ph_rule "${room} Vibration Detected" "[
+    $(ph_condition_vibration ${vibration}),
+    $(ph_condition_dx ${vibration} vibration),
     $(ph_condition_status ${status} gt -1),
     $(ph_condition_status ${status} lt 4)
   ]" "[
