@@ -65,6 +65,7 @@ function ph_sensors_init() {
       "uniqueid": "_dummy"
     }' 2>/dev/null))
     [ $? -eq 0 ] || break
+    [ ${id} -eq 0 ] && break
     _ph_info "/sensors/${id}: created dummy sensor"
   done
 
