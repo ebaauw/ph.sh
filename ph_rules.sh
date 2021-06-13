@@ -991,48 +991,59 @@ function ph_rules_fan() {
 # - Prevent motion sensor from turning on room when curtains close.  Probably
 #   need an additional status or flag for that.
 
-# Usage: ph_rules_curtains room status curtains temperature [daylight]
+# Usage: ph_rules_curtains room status curtains motion temperature [daylight]
 function ph_rules_curtains() {
   local room="${1}"
   local -i status=${2}
   local -i curtains=${3}
-  local -i temperature=${4}
-  local -i daylight="${5:-1}"
+  local -i motion=${4}
+  local -i temperature=${5}
+  local -i daylight="${6:-1}"
 
-  ph_rule "${room} Sunset" "[
+  ph_rule "${room} Curtains Sunset" "[
     $(ph_condition_dark ${daylight})
   ]" "[
+    $(ph_action_sensor_config ${motion} '{"on": false}'),
     $(ph_action_light_open ${curtains} false),
     $(ph_action_group_open ${curtains} false)
   ]"
 
-  ph_rule "${room} Sunrise" "[
+  ph_rule "${room} Curtains Sunrise" "[
     $(ph_condition_status ${status} gt -1),
     $(ph_condition_daylight ${daylight}),
     $(ph_condition_localtime "23:00:00" "13:00:00")
   ]" "[
+    $(ph_action_sensor_config ${motion} '{"on": false}'),
     $(ph_action_light_open ${curtains}),
     $(ph_action_group_open ${curtains})
   ]"
 
   # TODO: change time to lightlevel when sun shines into room
-  ph_rule "${room} Cool, Daylight" "[
+  ph_rule "${room} Curtains Cool, Daylight" "[
     $(ph_condition_temperature ${temperature} lt 2250),
     $(ph_condition_daylight ${daylight}),
     $(ph_condition_localtime "13:00:00" "23:00:00")
   ]" "[
+    $(ph_action_sensor_config ${motion} '{"on": false}'),
     $(ph_action_light_open ${curtains}),
     $(ph_action_group_open ${curtains})
   ]"
 
   # TODO: change time to lightlevel when sun shines into room
-  ph_rule "${room} Hot, Daylight" "[
+  ph_rule "${room} Curtains Hot, Daylight" "[
     $(ph_condition_temperature ${temperature} gt 2300),
     $(ph_condition_daylight ${daylight}),
     $(ph_condition_localtime "13:00:00" "23:00:00")
   ]" "[
+    $(ph_action_sensor_config ${motion} '{"on": false}'),
     $(ph_action_light_open ${curtains} false),
     $(ph_action_group_open ${curtains} false)
+  ]"
+
+  ph_rule "Bedroom Curtains Reset Motion" "[
+    $(ph_condition /lights/${curtains}/state/on ddx "PT00:00:10")
+  ]" "[
+    $(ph_action_sensor_config ${motion} '{"on": true}')
   ]"
 }
 
