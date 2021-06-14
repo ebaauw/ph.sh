@@ -1041,10 +1041,18 @@ function ph_rules_curtains() {
   ]"
 
   ph_rule "Bedroom Curtains Reset Motion" "[
-    $(ph_condition /lights/${curtains}/state/on ddx "PT00:00:10")
+    $(ph_condition_light ${curtains} lift ddx "PT00:00:15")
   ]" "[
     $(ph_action_sensor_config ${motion} '{"on": true}')
-  ]"
+  ]"\
+
+  # FIXME: doesn't work because `config.on` is false.
+  # ph_rule "Bedroom Curtains Reset Motion" "[
+  #   $(ph_condition_sensor_config ${motion} on eq false),
+  #   $(ph_condition_sensor_config ${motion} on ddx "PT00:00:15")
+  # ]" "[
+  #   $(ph_action_sensor_config ${motion} '{"on": true}')
+  # ]"
 }
 
 # ===== Thermostat =============================================================
