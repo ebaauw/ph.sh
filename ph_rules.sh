@@ -638,7 +638,7 @@ function ph_rules_vibration() {
   ph_rule "${room} Vibration Detected" "[
     $(ph_condition_vibration ${vibration}),
     $(ph_condition_dx ${vibration} vibration),
-    $(ph_condition_status ${status} gt -1),
+    $(ph_condition_status ${status} gt 0),
     $(ph_condition_status ${status} lt 4)
   ]" "[
     $(ph_action_status ${status} 1)
