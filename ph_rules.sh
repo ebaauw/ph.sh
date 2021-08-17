@@ -1001,7 +1001,7 @@ function ph_rules_curtains() {
   local -i daylight="${6:-1}"
 
   ph_rule "${room} Curtains Sunset" "[
-    $(ph_condition_dark ${daylight})
+    $(ph_condition_daylight ${daylight} false)
   ]" "[
     $(ph_action_sensor_config ${motion} '{"on": false}'),
     $(ph_action_light_open ${curtains} false),
