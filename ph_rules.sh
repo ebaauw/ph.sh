@@ -1040,7 +1040,7 @@ function ph_rules_curtains() {
     $(ph_action_group_open ${curtains} false)
   ]"
 
-  ph_rule "Bedroom Curtains Reset Motion" "[
+  ph_rule "${room} Curtains Reset Motion" "[
     $(ph_condition_sensor_config ${motion} on eq false),
     $(ph_condition_sensor_config ${motion} on ddx "PT00:00:15")
   ]" "[
