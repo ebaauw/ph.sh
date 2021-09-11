@@ -402,7 +402,6 @@ function ph_rules_night() {
   ]"
 
   ph_rule "Night On" "[
-    $(ph_condition_flag ${boottime}),
     $(ph_condition_localtime ${evening} ${morning})
   ]" "[
     $(ph_action_flag ${night})
