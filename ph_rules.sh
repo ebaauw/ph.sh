@@ -308,16 +308,14 @@ function ph_action_group_dim() {
   local -i value
   local -i tt
   local -i hb
-  local bri_inc
 
   case "${2}" in
-    up)     value=254  ; tt=20   ;;
-    down)   value=-254 ; tt=20   ;;
+    up)     value=254  ; tt=30   ;;
+    down)   value=-254 ; tt=30   ;;
     stop)   value=0    ; tt=0    ;;
     wakeup) value=254  ; tt=6000 ;;
   esac
-  [ "${_ph_model}" == "deCONZ" ] && bri_inc=bri || bri_inc=bri_inc
-  ph_action_group_action "${1}" "{\"${bri_inc}\": ${value}, \"transitiontime\": ${tt}}"
+  ph_action_group_action "${1}" "{\"bri_inc\": ${value}, \"transitiontime\": ${tt}}"
 }
 
 # Usage: action="$(ph_action_scene group scene)"
@@ -740,6 +738,56 @@ function ph_rules_switch_toggle() {
     $(ph_condition_status ${status} lt 1)
   ]" "[
     $(ph_action_status ${status} 1)
+  ]"
+}
+
+# Usage: ph_rules_switch_foh room status switch group [left|right|both]
+function ph_rules_switch_foh() {
+  local room="${1}"
+  local -i status=${2}
+  local -i switch=${3}
+  local -i group=${4}
+  case "${5}" in
+    "left")  up=1; down=2; name=" Left" ;;
+    "right") up=3; down=4; name=" Right" ;;
+    "both")  up=5; down=6; name=" Both" ;;
+    "")      up=1; down=2; name="" ;;
+  esac
+
+  ph_rule "${room} Switch Up${name} Press" "[
+    $(ph_condition_buttonevent ${switch} ${up}002)
+  ]" "[
+    $(ph_action_status ${status} 1)
+  ]"
+
+  ph_rule "${room} Switch Up${name} Hold" "[
+    $(ph_condition_buttonevent ${switch} ${up}001)
+  ]" "[
+    $(ph_action_group_dim "${group}" up)
+  ]"
+
+  ph_rule "${room} Switch Up${name} Release" "[
+    $(ph_condition_buttonevent ${switch} ${up}003)
+  ]" "[
+    $(ph_action_group_dim ${group} stop)
+  ]"
+
+  ph_rule "${room} Switch Down${name} Press" "[
+    $(ph_condition_buttonevent ${switch} ${down}002)
+  ]" "[
+    $(ph_action_status ${status} 0)
+  ]"
+
+  ph_rule "${room} Switch Down${name} Hold" "[
+    $(ph_condition_buttonevent ${switch} ${down}001)
+  ]" "[
+    $(ph_action_group_dim "${group}" down)
+  ]"
+
+  ph_rule "${room} Switch Down${name} Release" "[
+    $(ph_condition_buttonevent ${switch} ${down}003)
+  ]" "[
+    $(ph_action_group_dim ${group} stop)
   ]"
 }
 
