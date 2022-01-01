@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # ph_keepalive.command
-# Copyright © 2020 Erik Baauw. All rights reserved.
+# Copyright © 2020-2022 Erik Baauw. All rights reserved.
 #
 # Update the room status when macOS user has been active recently.
 

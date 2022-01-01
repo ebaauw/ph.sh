@@ -1,7 +1,7 @@
 # ph.sh
 
 ## Shell commands for Philips Hue and deCONZ
-Copyright © 2017-2020 Erik Baauw. All rights reserved.
+Copyright © 2017-2022 Erik Baauw. All rights reserved.
 
 ### Notice
 Most of this repository has been deprecated.  NodeJS versions of `ph.sh` and `json.sh` are included in [homebridge-hue](https://github.com/ebaauw/homebridge-hue) and

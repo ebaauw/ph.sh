@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # ph_rules.sh
-# Copyright © 2017-2020 Erik Baauw. All rights reserved.
+# Copyright © 2017-2022 Erik Baauw. All rights reserved.
 #
 # Create/configure rules on the Hue bridge or deCONZ gateway.
 #
