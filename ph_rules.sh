@@ -616,6 +616,35 @@ function ph_rules_motion() {
   ]"
 }
 
+# Usage: ph_rules_motion room status presence motion
+function ph_rules_presence() {
+  local room="${1}"
+  local -i status=${2}
+  local -i presence=${3}
+  local -i motion=${4}
+  local timeout=${5}
+
+  ph_rule "${room} Motion Detected" "[
+    $(ph_condition_motion ${motion}),
+    $(ph_condition_dx ${motion} presence),
+    $(ph_condition_status ${status} gt -1),
+    $(ph_condition_status ${status} lt 4)
+  ]" "[
+    $(ph_action_status ${status} 1)
+  ]"
+
+  # ddx condition as workaround for deCONZ DDF bug
+  ph_rule "${room} Presence Clear" "[
+    $(ph_condition_motion ${presence} false),
+    $(ph_condition_motion ${motion} false),
+    $(ph_condition_ddx ${motion} presence "00:00:45"),
+    $(ph_condition_status ${status} gt 0),
+    $(ph_condition_status ${status} lt 4)
+  ]" "[
+    $(ph_action_status ${status} 0)
+  ]"
+}
+
 # Usage: ph_rules_vibration room status flag vibration [timeout]
 function ph_rules_vibration() {
   local room="${1}"
