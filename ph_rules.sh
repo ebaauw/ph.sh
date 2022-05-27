@@ -142,8 +142,8 @@ function ph_condition_flag() {
   ph_condition_sensor "${1}" flag eq "${2:-true}"
 }
 
-# Usage: condition="$(ph_condition_motion sensor [value])"
-function ph_condition_motion() {
+# Usage: condition="$(ph_condition_presence sensor [value])"
+function ph_condition_presence() {
   ph_condition_sensor "${1}" presence eq "${2:-true}"
 }
 
@@ -572,24 +572,23 @@ function ph_rules_wakeup() {
 #   15 seconds (status 3).  A warning is given at 1 minute's notice before the
 #   lights are turned off.
 
-# Usage: ph_rules_motion room status flag motion [timeout]
+# Usage: ph_rules_motion room status motion [timeout]
 function ph_rules_motion() {
   local room="${1}"
   local -i status=${2}
-  local -i flag=${3}
-  local -i motion=${4}
-  local timeout=${5}
+  local -i motion=${3}
+  local timeout=${4}
 
   if [ -z "${timeout}" ] ; then
     ph_rule "${room} Motion Clear" "[
-      $(ph_condition_motion ${motion} false),
+      $(ph_condition_presence ${motion} false),
       $(ph_condition_dx ${motion} presence),
       $(ph_condition_status ${status} 2)
     ]" "[
       $(ph_action_status ${status} 3)
     ]"
     ph_rule "${room} No Motion" "[
-      $(ph_condition_motion ${motion} false),
+      $(ph_condition_presence ${motion} false),
       $(ph_condition_ddx ${motion} presence "00:55:00"),
       $(ph_condition_status ${status} gt 0),
       $(ph_condition_status ${status} lt 4)
@@ -598,7 +597,7 @@ function ph_rules_motion() {
     ]"
   else
     ph_rule "${room} Motion Clear" "[
-      $(ph_condition_motion ${motion} false),
+      $(ph_condition_presence ${motion} false),
       $(ph_condition_ddx ${motion} presence ${timeout}),
       $(ph_condition_status ${status} gt 0),
       $(ph_condition_status ${status} lt 4)
@@ -607,7 +606,7 @@ function ph_rules_motion() {
     ]"
   fi
   ph_rule "${room} Motion Detected" "[
-    $(ph_condition_motion ${motion}),
+    $(ph_condition_presence ${motion}),
     $(ph_condition_dx ${motion} presence),
     $(ph_condition_status ${status} gt -1),
     $(ph_condition_status ${status} lt 4)
@@ -625,7 +624,7 @@ function ph_rules_presence() {
   local timeout=${5}
 
   ph_rule "${room} Motion Detected" "[
-    $(ph_condition_motion ${motion}),
+    $(ph_condition_presence ${motion}),
     $(ph_condition_dx ${motion} presence),
     $(ph_condition_status ${status} gt -1),
     $(ph_condition_status ${status} lt 4)
@@ -635,8 +634,8 @@ function ph_rules_presence() {
 
   # ddx condition as workaround for deCONZ DDF bug
   ph_rule "${room} Presence Clear" "[
-    $(ph_condition_motion ${presence} false),
-    $(ph_condition_motion ${motion} false),
+    $(ph_condition_presence ${presence} false),
+    $(ph_condition_presence ${motion} false),
     $(ph_condition_ddx ${motion} presence "00:00:45"),
     $(ph_condition_status ${status} gt 0),
     $(ph_condition_status ${status} lt 4)
@@ -645,13 +644,12 @@ function ph_rules_presence() {
   ]"
 }
 
-# Usage: ph_rules_vibration room status flag vibration [timeout]
+# Usage: ph_rules_vibration room status vibration [timeout]
 function ph_rules_vibration() {
   local room="${1}"
   local -i status=${2}
-  local -i flag=${3}
-  local -i vibration=${4}
-  local timeout=${5}
+  local -i vibration=${3}
+  local timeout=${4}
 
   ph_rule "${room} Vibration Detected" "[
     $(ph_condition_vibration ${vibration}),
@@ -671,7 +669,7 @@ function ph_rules_leave_room() {
   local -i motion=${4}
 
   ph_rule "${room} to ${room2}" "[
-    $(ph_condition_motion ${motion}),
+    $(ph_condition_presence ${motion}),
     $(ph_condition_dx ${motion} presence),
     $(ph_condition_status ${status} 1)
   ]" "[
@@ -681,13 +679,12 @@ function ph_rules_leave_room() {
 
 # ===== Door Sensors ===========================================================
 
-# Usage: ph_rules_room room status flag door [noclose]
+# Usage: ph_rules_room room status door [noclose]
 function ph_rules_door() {
   local room="${1}"
   local -i status=${2}
-  local -i flag=${3}
-  local -i door=${4}
-  local noclose="${5}"
+  local -i door=${3}
+  local noclose="${4}"
 
   if [ -z "${noclose}" ] ; then
     ph_rule "${room} Door Close" "[
