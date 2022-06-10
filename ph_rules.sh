@@ -621,7 +621,6 @@ function ph_rules_presence() {
   local -i status=${2}
   local -i presence=${3}
   local -i motion=${4}
-  local timeout=${5}
 
   ph_rule "${room} Motion Detected" "[
     $(ph_condition_presence ${motion}),
