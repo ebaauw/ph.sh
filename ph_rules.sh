@@ -248,8 +248,8 @@ function ph_action_light_state() {
   ph_action "/lights/${1}/state"   "${2}" "${3}"
 }
 
-# Usage: action="$(ph_action_group id [method] [body])"
-function ph_action_group() {
+# Usage: action="$(ph_action_group_action id [method] [body])"
+function ph_action_group_action() {
   ph_action "/groups/${1}/action"  "${2}" "${3}"
 }
 
@@ -280,17 +280,17 @@ function ph_action_light_bri() {
 
 # Usage: condition="$(ph_action_group_on group [value])"
 function ph_action_group_on() {
-  ph_action_group  "${1}" "{\"on\": ${2:-true}}"
+  ph_action_group_action  "${1}" "{\"on\": ${2:-true}}"
 }
 
 # Usage: condition="$(ph_action_group_open group [value])"
 function ph_action_group_open() {
-  ph_action_group  "${1}" "{\"open\": ${2:-true}}"
+  ph_action_group_action  "${1}" "{\"open\": ${2:-true}}"
 }
 
 # Usage: action="$(ph_action_group_alert group [value])"
 function ph_action_group_alert() {
-  ph_action_group  "${1}" "{\"alert\": \"${2:-select}\"}"
+  ph_action_group_action  "${1}" "{\"alert\": \"${2:-select}\"}"
 }
 
 # Usage: action="$(ph_action_sensor_alert sensor [value])"
@@ -315,7 +315,7 @@ function ph_action_group_dim() {
     stop)   value=0    ; tt=0    ;;
     wakeup) value=254  ; tt=6000 ;;
   esac
-  ph_action_group "${1}" "{\"bri_inc\": ${value}, \"transitiontime\": ${tt}}"
+  ph_action_group_action "${1}" "{\"bri_inc\": ${value}, \"transitiontime\": ${tt}}"
 }
 
 # Usage: action="$(ph_action_scene group scene)"
@@ -323,7 +323,7 @@ function ph_action_scene_recall() {
   if [ "${_ph_model}" == "deCONZ" ] ; then
     ph_action "/groups/${1}/scenes/${2}/recall"
   else
-    ph_action_group "${1}" "{\"scene\": \"${2}\"}"
+    ph_action_group_action "${1}" "{\"scene\": \"${2}\"}"
   fi
 }
 
@@ -541,7 +541,7 @@ function ph_rules_wakeup() {
   ph_rule "${room} Wakeup 1/3" "[
     $(ph_condition_status ${status} -2)
   ]" "[
-    $(ph_action_group ${group} '{"on": true, "bri": 1}')
+    $(ph_action_scene_recall ${group} ${scene}),
     $(ph_action_flag ${night} false)
   ]"
 
@@ -740,7 +740,7 @@ function ph_rules_dimmer_onoff() {
   ph_rule "${room} Dimmer On Hold" "[
   $(ph_condition_buttonevent ${dimmer} 1001)
   ]" "[
-    $(ph_action_group ${group} '{"on": true, "bri": 254}')
+    $(ph_action_scene_recall ${group} ${scene})
   ]"
 }
 
@@ -872,14 +872,14 @@ function ph_rules_light() {
       $(ph_condition_flag ${flag}),
       $(ph_condition_flag ${night} false)
     ]" "[
-      $(ph_action_group ${group} '{"on": true, "bri": 254}')
+      $(ph_action_scene_recall ${group} ${default})
     ]"
 
     ph_rule "${room} On, Night" "[
       $(ph_condition_flag ${flag}),
       $(ph_condition_flag ${night})
     ]" "[
-      $(ph_action_group ${group} '{"on": true, "bri": 25}')
+      $(ph_action_scene_recall ${group} ${nightmode})
     ]"
 
     return
@@ -902,7 +902,7 @@ function ph_rules_light() {
         $(ph_condition_status ${lightlevel} lt 125),
         $(ph_condition_flag ${night} false)
       ]" "[
-        $(ph_action_group ${group} '{"on": true, "bri": 254}')
+        $(ph_action_scene_recall ${group} ${default})
       ]"
 
       ph_rule "${room} On, Dark 2, Day" "[
@@ -910,7 +910,7 @@ function ph_rules_light() {
         $(ph_condition_status ${lightlevel} gt 205),
         $(ph_condition_flag ${night} false)
       ]" "[
-        $(ph_action_group ${group} '{"on": true, "bri": 254}')
+        $(ph_action_scene_recall ${group} ${default})
       ]"
 
       ph_rule "${room} On, Dark 1, Night" "[
@@ -918,7 +918,7 @@ function ph_rules_light() {
         $(ph_condition_status ${lightlevel} lt 125),
         $(ph_condition_flag ${night})
       ]" "[
-        $(ph_action_group ${group} '{"on": true, "bri": 25}')
+        $(ph_action_scene_recall ${group} ${nightmode})
       ]"
 
       ph_rule "${room} On, Dark 2, Night" "[
@@ -926,7 +926,7 @@ function ph_rules_light() {
         $(ph_condition_status ${lightlevel} gt 205),
         $(ph_condition_flag ${night})
       ]" "[
-        $(ph_action_group ${group} '{"on": true, "bri": 25}')
+        $(ph_action_scene_recall ${group} ${nightmode})
       ]"
     else
       # lightlevel is Daylight sensor on Hue bridge
@@ -942,7 +942,7 @@ function ph_rules_light() {
         $(ph_condition_daylight ${lightlevel} false),
         $(ph_condition_flag ${night} false)
       ]" "[
-        $(ph_action_group ${group} '{"on": true, "bri": 254}')
+        $(ph_action_scene_recall ${group} ${default})
       ]"
 
       ph_rule "${room} On, Not Daylight, Night" "[
@@ -950,7 +950,7 @@ function ph_rules_light() {
         $(ph_condition_daylight ${lightlevel} false),
         $(ph_condition_flag ${night})
       ]" "[
-        $(ph_action_group ${group} '{"on": true, "bri": 25}')
+        $(ph_action_scene_recall ${group} ${nightmode})
       ]"
     fi
   else
@@ -968,7 +968,7 @@ function ph_rules_light() {
         $(ph_condition_dark ${lightlevel}),
         $(ph_condition_flag ${night} false)
       ]" "[
-        $(ph_action_group ${group} '{"on": true, "bri": 254}')
+        $(ph_action_scene_recall ${group} ${default})
       ]"
     else
       ph_rule "${room} On, TV Off, Dark, Day" "[
@@ -977,7 +977,7 @@ function ph_rules_light() {
         $(ph_condition_dark ${lightlevel}),
         $(ph_condition_flag ${night} false)
       ]" "[
-        $(ph_action_group ${group} '{"on": true, "bri": 254}')
+        $(ph_action_scene_recall ${group} ${default})
       ]"
 
       ph_rule "${room} On, TV On, Dark, Day" "[
@@ -986,7 +986,7 @@ function ph_rules_light() {
         $(ph_condition_dark ${lightlevel}),
         $(ph_condition_flag ${night} false)
       ]" "[
-        $(ph_action_group ${group} '{"on": true, "bri": 127}')
+        $(ph_action_scene_recall ${group} ${tv})
       ]"
 
       ph_rule "${room} On, TV On, Not Daylight, Day" "[
@@ -996,7 +996,7 @@ function ph_rules_light() {
         $(ph_condition_daylight ${lightlevel} false),
         $(ph_condition_flag ${night} false)
       ]" "[
-        $(ph_action_group ${group} '{"on": true, "bri": 127}')
+        $(ph_action_scene_recall ${group} ${tv})
       ]"
     fi
 
@@ -1005,7 +1005,7 @@ function ph_rules_light() {
       $(ph_condition_dark ${lightlevel}),
       $(ph_condition_flag ${night})
     ]" "[
-      $(ph_action_group ${group} '{"on": true, "bri": 25}')
+      $(ph_action_scene_recall ${group} ${nightmode})
     ]"
 
     ph_rule "${room} On, Not Daylight, Night" "[
@@ -1014,7 +1014,7 @@ function ph_rules_light() {
       $(ph_condition_flag ${night}),
       $(ph_condition_dx ${night} flag)
     ]" "[
-      $(ph_action_group ${group} '{"on": true, "bri": 25}')
+      $(ph_action_scene_recall ${group} ${nightmode})
     ]"
   fi
 }
