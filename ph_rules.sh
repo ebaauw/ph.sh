@@ -541,7 +541,7 @@ function ph_rules_wakeup() {
   ph_rule "${room} Wakeup 1/3" "[
     $(ph_condition_status ${status} -2)
   ]" "[
-    $(ph_action_group ${group} '{"on": true, "bri": 1}'),
+    $(ph_action_group ${group} '{"on": true, "bri": 1}')
     $(ph_action_flag ${night} false)
   ]"
 
