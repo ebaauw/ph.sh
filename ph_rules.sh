@@ -268,14 +268,24 @@ function ph_action_light_on() {
   ph_action_light_state  "${1}" "{\"on\": ${2:-true}}"
 }
 
-# Usage: condition="$(ph_action_light_state light [value])"
-function ph_action_light_open() {
-  ph_action_light_state  "${1}" "{\"open\": ${2:-true}}"
-}
-
 # Usage: action="$(ph_action_light_bri light [value])"
 function ph_action_light_bri() {
   ph_action_light_state  "${1}" "{\"bri\": ${2:-254}}"
+}
+
+# Usage: condition="$(ph_action_blind_open blind [value])"
+function ph_action_blind_open() {
+  ph_action_light_state  "${1}" "{\"open\": ${2:-true}}"
+}
+
+# Usage: condition="$(ph_action_blind_lift blind [value])"
+function ph_action_blind_lift() {
+  ph_action_light_state  "${1}" "{\"lift\": ${2:-100}}"
+}
+
+# Usage: condition="$(ph_action_blind_stop blind)"
+function ph_action_blind_stop() {
+  ph_action_light_state  "${1}" "{\"stop\": true}"
 }
 
 # Usage: condition="$(ph_action_group_on group [value])"
@@ -816,6 +826,55 @@ function ph_rules_switch_foh() {
   ]"
 }
 
+# Usage: ph_rules_switch_foh_blind room switch blind [left|right|both]
+function ph_rules_switch_foh_blind() {
+  local room="${1}"
+  local -i switch=${2}
+  local -i blind=${3}
+  case "${4}" in
+    "left")  up=1; down=2; name=" Left" ;;
+    "right") up=3; down=4; name=" Right" ;;
+    "both")  up=5; down=6; name=" Both" ;;
+    "")      up=1; down=2; name="" ;;
+  esac
+
+  ph_rule "${room} Switch Up${name} Press" "[
+    $(ph_condition_buttonevent ${switch} ${up}002)
+  ]" "[
+    $(ph_action_blind_open ${blind})
+  ]"
+
+  ph_rule "${room} Switch Up${name} Hold" "[
+    $(ph_condition_buttonevent ${switch} ${up}001)
+  ]" "[
+    $(ph_action_blind_open ${blind})
+  ]"
+
+  ph_rule "${room} Switch Up${name} Release" "[
+    $(ph_condition_buttonevent ${switch} ${up}003)
+  ]" "[
+    $(ph_action_blind_stop ${blind})
+  ]"
+
+  ph_rule "${room} Switch Down${name} Press" "[
+    $(ph_condition_buttonevent ${switch} ${down}002)
+  ]" "[
+    $(ph_action_blind_open ${blind} false)
+  ]"
+
+  ph_rule "${room} Switch Down${name} Hold" "[
+    $(ph_condition_buttonevent ${switch} ${down}001)
+  ]" "[
+    $(ph_action_blind_open ${blind} false)
+  ]"
+
+  ph_rule "${room} Switch Down${name} Release" "[
+    $(ph_condition_buttonevent ${switch} ${down}003)
+  ]" "[
+    $(ph_action_blind_stop ${blind})
+  ]"
+}
+
 # Usage: ph_rules_dimmer_updown room dimmer group
 function ph_rules_dimmer_updown() {
   local room="${1}"
@@ -1068,7 +1127,7 @@ function ph_rules_curtains() {
     $(ph_condition_daylight ${daylight} false)
   ]" "[
     $(ph_action_sensor_config ${motion} '{"on": false}'),
-    $(ph_action_light_open ${curtains} false),
+    $(ph_action_blind_open ${curtains} false),
     $(ph_action_group_open ${curtains} false)
   ]"
 
@@ -1078,7 +1137,7 @@ function ph_rules_curtains() {
     $(ph_condition_localtime "23:00:00" "13:00:00")
   ]" "[
     $(ph_action_sensor_config ${motion} '{"on": false}'),
-    $(ph_action_light_open ${curtains}),
+    $(ph_action_blind_open ${curtains}),
     $(ph_action_group_open ${curtains})
   ]"
 
@@ -1089,7 +1148,7 @@ function ph_rules_curtains() {
     $(ph_condition_localtime "13:00:00" "23:00:00")
   ]" "[
     $(ph_action_sensor_config ${motion} '{"on": false}'),
-    $(ph_action_light_open ${curtains}),
+    $(ph_action_blind_open ${curtains}),
     $(ph_action_group_open ${curtains})
   ]"
 
@@ -1100,7 +1159,7 @@ function ph_rules_curtains() {
     $(ph_condition_localtime "13:00:00" "23:00:00")
   ]" "[
     $(ph_action_sensor_config ${motion} '{"on": false}'),
-    $(ph_action_light_open ${curtains} false),
+    $(ph_action_blind_open ${curtains} false),
     $(ph_action_group_open ${curtains} false)
   ]"
 
