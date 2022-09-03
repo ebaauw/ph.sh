@@ -1127,8 +1127,7 @@ function ph_rules_curtains() {
     $(ph_condition_daylight ${daylight} false)
   ]" "[
     $(ph_action_sensor_config ${motion} '{"on": false}'),
-    $(ph_action_blind_open ${curtains} false),
-    $(ph_action_group_open ${curtains} false)
+    $(ph_action_blind_open ${curtains} false)
   ]"
 
   ph_rule "${room} Curtains Sunrise" "[
@@ -1137,8 +1136,7 @@ function ph_rules_curtains() {
     $(ph_condition_localtime "23:00:00" "13:00:00")
   ]" "[
     $(ph_action_sensor_config ${motion} '{"on": false}'),
-    $(ph_action_blind_open ${curtains}),
-    $(ph_action_group_open ${curtains})
+    $(ph_action_blind_open ${curtains})
   ]"
 
   # TODO: change time to lightlevel when sun shines into room
@@ -1148,8 +1146,7 @@ function ph_rules_curtains() {
     $(ph_condition_localtime "13:00:00" "23:00:00")
   ]" "[
     $(ph_action_sensor_config ${motion} '{"on": false}'),
-    $(ph_action_blind_open ${curtains}),
-    $(ph_action_group_open ${curtains})
+    $(ph_action_blind_open ${curtains})
   ]"
 
   # TODO: change time to lightlevel when sun shines into room
@@ -1159,8 +1156,7 @@ function ph_rules_curtains() {
     $(ph_condition_localtime "13:00:00" "23:00:00")
   ]" "[
     $(ph_action_sensor_config ${motion} '{"on": false}'),
-    $(ph_action_blind_open ${curtains} false),
-    $(ph_action_group_open ${curtains} false)
+    $(ph_action_blind_open ${curtains} false)
   ]"
 
   ph_rule "${room} Curtains Reset Motion" "[
