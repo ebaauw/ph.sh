@@ -293,11 +293,6 @@ function ph_action_group_on() {
   ph_action_group_action  "${1}" "{\"on\": ${2:-true}}"
 }
 
-# Usage: condition="$(ph_action_group_open group [value])"
-function ph_action_group_open() {
-  ph_action_group_action  "${1}" "{\"open\": ${2:-true}}"
-}
-
 # Usage: action="$(ph_action_group_alert group [value])"
 function ph_action_group_alert() {
   ph_action_group_action  "${1}" "{\"alert\": \"${2:-select}\"}"
@@ -798,6 +793,7 @@ function ph_rules_switch_foh() {
   ph_rule "${room} Switch Up${name} Hold" "[
     $(ph_condition_buttonevent ${switch} ${up}001)
   ]" "[
+    $(ph_action_group_on "${group}"),
     $(ph_action_group_dim "${group}" up)
   ]"
 
@@ -823,55 +819,6 @@ function ph_rules_switch_foh() {
     $(ph_condition_buttonevent ${switch} ${down}003)
   ]" "[
     $(ph_action_group_dim ${group} stop)
-  ]"
-}
-
-# Usage: ph_rules_switch_foh_blind room switch blind [left|right|both]
-function ph_rules_switch_foh_blind() {
-  local room="${1}"
-  local -i switch=${2}
-  local -i blind=${3}
-  case "${4}" in
-    "left")  up=1; down=2; name=" Left" ;;
-    "right") up=3; down=4; name=" Right" ;;
-    "both")  up=5; down=6; name=" Both" ;;
-    "")      up=1; down=2; name="" ;;
-  esac
-
-  ph_rule "${room} Switch Up${name} Press" "[
-    $(ph_condition_buttonevent ${switch} ${up}002)
-  ]" "[
-    $(ph_action_blind_open ${blind})
-  ]"
-
-  ph_rule "${room} Switch Up${name} Hold" "[
-    $(ph_condition_buttonevent ${switch} ${up}001)
-  ]" "[
-    $(ph_action_blind_open ${blind})
-  ]"
-
-  ph_rule "${room} Switch Up${name} Release" "[
-    $(ph_condition_buttonevent ${switch} ${up}003)
-  ]" "[
-    $(ph_action_blind_stop ${blind})
-  ]"
-
-  ph_rule "${room} Switch Down${name} Press" "[
-    $(ph_condition_buttonevent ${switch} ${down}002)
-  ]" "[
-    $(ph_action_blind_open ${blind} false)
-  ]"
-
-  ph_rule "${room} Switch Down${name} Hold" "[
-    $(ph_condition_buttonevent ${switch} ${down}001)
-  ]" "[
-    $(ph_action_blind_open ${blind} false)
-  ]"
-
-  ph_rule "${room} Switch Down${name} Release" "[
-    $(ph_condition_buttonevent ${switch} ${down}003)
-  ]" "[
-    $(ph_action_blind_stop ${blind})
   ]"
 }
 
