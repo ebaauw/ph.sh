@@ -201,7 +201,7 @@ function ph_condition_buttonevent() {
   if [ -z "${3}" ] ; then
     echo $(ph_condition_sensor "${1}" buttonevent "${2}"),
   else
-    echo $(ph_condition_sensor "${1}" buttonevent gt" ${2}"),
+    echo $(ph_condition_sensor "${1}" buttonevent gt "${2}"),
     echo $(ph_condition_sensor "${1}" buttonevent lt "${3}"),
   fi
   ph_condition_dx "${1}"
