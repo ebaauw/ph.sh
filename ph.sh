@@ -1,50 +1,45 @@
 #!/bin/bash
 #
-# ph.sh
-# Copyright © 2017-2022 Erik Baauw. All rights reserved.
+# deconz.sh
+# Copyright © 2017-2023 Erik Baauw. All rights reserved.
 #
-# Shell library for interacting with a Philips Hue or compatible bridge using
-# the Philips Hue or compatible REST API.
-# Currently tested on the following bridges:
-# - Philips Hue v2 (square) bridge;
-# - Philips Hue v1 (round) brudge;
-# - dresden elektronik deCONZ REST API plugin.
+# Shell library for interacting with a deCONZ gateway.
 
 # ===== CONFIGURATION ==========================================================
 
 # Set default values.
-: ${ph_verbose:=true}
-: ${ph_debug:=false}
+: ${deconz_verbose:=true}
+: ${deconz_debug:=false}
 
 # ===== LIGHT STATE ============================================================
 
 # Power-on color temperature.
-ph_ct_poweron=366       # 2,732 Kelvin
+deconz_ct_poweron=366       # 2,732 Kelvin
 
 # Light recipe color temperatures.
-ph_ct_relaxed=447       # 2,237 Kelvin
-ph_ct_read=346          # 2,890 Kelvin
-ph_ct_concentrate=233   # 4,292 Kelvin
-ph_ct_energize=156      # 6,410 Kelvin
+deconz_ct_relaxed=447       # 2,237 Kelvin
+deconz_ct_read=346          # 2,890 Kelvin
+deconz_ct_concentrate=233   # 4,292 Kelvin
+deconz_ct_energize=156      # 6,410 Kelvin
 
 # ===== UTILITY FUNCTIONS ======================================================
 
 # Return quoted string from string.
-# Usage: s=$(ph_quote string)
-function ph_quote() {
+# Usage: s=$(deconz_quote string)
+function deconz_quote() {
   [[ "${1}" == '"'*'"' ]] && echo "${1}" || echo "\"${1}\""
 }
 
 # Remove quotes from string; return unquoted string from string.
-# Usage: s=$(ph_unquote string)
-function ph_unquote() {
+# Usage: s=$(deconz_unquote string)
+function deconz_unquote() {
   [[ "${1}" == '"'*'"' ]] && eval echo "${1}" || echo "${1}"
 }
 
 # Issue message on standard error
-# Usage: _ph_msg severity [-n] [-s] message...
-function _ph_msg() {
-  local start="${_ph_host:-ph.sh}: ${1}${1:+: }"
+# Usage: _deconz_msg severity [-n] [-s] message...
+function _deconz_msg() {
+  local start="${_deconz_host:-deconz.sh}: ${1}${1:+: }"
   local nflag=
   shift
   if [ "${1}" == "-n" ] ; then
@@ -59,32 +54,29 @@ function _ph_msg() {
 }
 
 # Issue error message
-# Usage: _ph_error [-n|-s] message...
-function _ph_error() {
-  _ph_msg error "${@}"
+# Usage: _deconz_error [-n|-s] message...
+function _deconz_error() {
+  _deconz_msg error "${@}"
 }
 
 # Issue warning message
-# Usage: _ph_warn [-n|-s] message...
-function _ph_warn() {
-  _ph_msg warning "${@}"
+# Usage: _deconz_warn [-n|-s] message...
+function _deconz_warn() {
+  _deconz_msg warning "${@}"
 }
 
-# Issue info message when ${ph_verbose} true
-# Usage: _ph_info [-n|-s] message...
-function _ph_info() {
-  ${ph_verbose} && _ph_msg "" "${@}"
+# Issue info message when ${deconz_verbose} true
+# Usage: _deconz_info [-n|-s] message...
+function _deconz_info() {
+  ${deconz_verbose} && _deconz_msg "" "${@}"
 }
 
-# Issue debug message when ${ph_debug} is true
-# Usage: _ph_debug [-n|-s] message...
-function _ph_debug() {
-  ${ph_debug} && _ph_msg debug "${@}"
+# Issue debug message when ${deconz_debug} is true
+# Usage: _deconz_debug [-n|-s] message...
+function _deconz_debug() {
+  ${deconz_debug} && _deconz_msg debug "${@}"
 }
 
-_ph_model=$(ph_unquote $(ph get /config/modelid))
-[ $? -eq 0 ] || return 1
-
-function ph_restart() {
-  [ "${_ph_model}" == "deCONZ" ] && ph -t 10 restart ${ph_verbose:+-v}
+function deconz_restart() {
+  deconz -t 10 restart ${deconz_verbose:+-v}
 }
