@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# ph_rules.sh
-# Copyright © 2017-2022 Erik Baauw. All rights reserved.
+# deconz_rules.sh
+# Copyright © 2017-2023 Erik Baauw. All rights reserved.
 #
-# Create/configure rules on the Hue bridge or deCONZ gateway.
+# Create/configure rules on a deCONZ gateway.
 #
 # Room Status:
 # -2  Wakeup
@@ -14,13 +14,13 @@
 # 3   Presence in adjacent room
 # 4   TV
 
-. ph.sh
+. deconz.sh
 if [ $? -ne 0 ] ; then
-  _ph_error "cannot load ph.sh"
+  _deconz_error "cannot load deconz.sh"
 fi
 
-# Usage: ph_rule name conditions actions
-function ph_rule() {
+# Usage: deconz_rule name conditions actions
+function deconz_rule() {
   local name="${1}"
   local conditions="${2}"
   local actions="${3}"
@@ -30,37 +30,37 @@ function ph_rule() {
     \"conditions\": ${conditions},
     \"actions\": ${actions}
   }"
-  local -i id=$(ph_unquote $(ph -t 10 post "/rules" "${body}"))
+  local -i id=$(deconz_unquote $(deconz -t 10 post "/rules" "${body}"))
   if [ ${id} -eq 0 ] ; then
-    _ph_error "cannot create rule \"${name}\""
+    _deconz_error "cannot create rule \"${name}\""
     json -c "${body}" >&2
     return 1
   fi
-  _ph_info "/rules/${id}: \"${name}\""
+  _deconz_info "/rules/${id}: \"${name}\""
 }
 
-# Usage: ph_rules_delete
-function ph_rules_delete() {
+# Usage: deconz_rules_delete
+function deconz_rules_delete() {
   local -i rule
-  local rules="$(ph get -al /rules | grep /name: | cut -d / -f 2)"
+  local rules="$(deconz get -al /rules | grep /name: | cut -d / -f 2)"
   local -i nrules=$(echo ${rules} | wc -w)
-  _ph_info "deleting ${nrules} rules..."
+  _deconz_info "deleting ${nrules} rules..."
   for rule in ${rules}; do
-    ph delete /rules/${rule}
+    deconz delete /rules/${rule}
   done
-  ph_restart
+  deconz_restart
 }
 
-# Usage: nrules=$(ph_rules_count)
-function ph_rules_count() {
-  local -i nrules=$(ph get -al /rules | grep /name: | wc -l)
+# Usage: nrules=$(deconz_rules_count)
+function deconz_rules_count() {
+  local -i nrules=$(deconz get -al /rules | grep /name: | wc -l)
   echo ${nrules}
 }
 
 # ===== Conditions =============================================================
 
-# Usage: condition="$(ph_condition address [[operator] value | 'dx'])"
-function ph_condition() {
+# Usage: condition="$(deconz_condition address [[operator] value | 'dx'])"
+function deconz_condition() {
   if [ -z "${3}" ] ; then
     if [ "${2}" == dx ] ; then
       echo "{
@@ -83,134 +83,134 @@ function ph_condition() {
   fi
 }
 
-# Usage: condition="$(ph_condition_sensor id attribute [[operator] value | 'dx'])"
-function ph_condition_sensor() {
-  ph_condition "/sensors/${1}/state/${2}" "${3}" "${4}"
+# Usage: condition="$(deconz_condition_sensor id attribute [[operator] value | 'dx'])"
+function deconz_condition_sensor() {
+  deconz_condition "/sensors/${1}/state/${2}" "${3}" "${4}"
 }
 
-# Usage: condition="$(ph_condition_sensor_config id attribute [[operator] value | 'dx'])"
-function ph_condition_sensor_config() {
-  ph_condition "/sensors/${1}/config/${2}" "${3}" "${4}"
+# Usage: condition="$(deconz_condition_sensor_config id attribute [[operator] value | 'dx'])"
+function deconz_condition_sensor_config() {
+  deconz_condition "/sensors/${1}/config/${2}" "${3}" "${4}"
 }
 
-# Usage: condition="$(ph_condition_light id attribute [[operator] value | 'dx'])"
-function ph_condition_light() {
-  ph_condition "/lights/${1}/state/${2}" "${3}" "${4}"
+# Usage: condition="$(deconz_condition_light id attribute [[operator] value | 'dx'])"
+function deconz_condition_light() {
+  deconz_condition "/lights/${1}/state/${2}" "${3}" "${4}"
 }
 
-# Usage: condition="$(ph_condition_group id attribute [[operator] value | 'dx'])"
-function ph_condition_group() {
-  ph_condition "/groups/${1}/state/${2}" "${3}" "${4}"
+# Usage: condition="$(deconz_condition_group id attribute [[operator] value | 'dx'])"
+function deconz_condition_group() {
+  deconz_condition "/groups/${1}/state/${2}" "${3}" "${4}"
 }
 
-# Usage: condition="$(ph_condition_config attribute [[operator] value | 'dx'])"
-function ph_condition_config() {
-  ph_condition "/config/${1}" "${2}" "${3}"
+# Usage: condition="$(deconz_condition_config attribute [[operator] value | 'dx'])"
+function deconz_condition_config() {
+  deconz_condition "/config/${1}" "${2}" "${3}"
 }
 
-# Usage: condition="$(ph_condition_dx sensor [attribute])"
-function ph_condition_dx() {
-  ph_condition_sensor "${1}" "${2:-lastupdated}" dx
+# Usage: condition="$(deconz_condition_dx sensor [attribute])"
+function deconz_condition_dx() {
+  deconz_condition_sensor "${1}" "${2:-lastupdated}" dx
 }
 
-# Usage: condition="$(ph_condition_ddx sensor [attribute] time)"
-function ph_condition_ddx() {
+# Usage: condition="$(deconz_condition_ddx sensor [attribute] time)"
+function deconz_condition_ddx() {
   if [ -z "${3}" ] ; then
-    ph_condition_sensor "${1}" lastupdated ddx "PT${2}"
+    deconz_condition_sensor "${1}" lastupdated ddx "PT${2}"
   else
-    ph_condition_sensor "${1}" "${2}" ddx "PT${3}"
+    deconz_condition_sensor "${1}" "${2}" ddx "PT${3}"
   fi
 }
 
-# Usage: condition="$(ph_condition_on light [value])"
-function ph_condition_on() {
-  ph_condition_light "${1}" on eq "${2:-true}"
+# Usage: condition="$(deconz_condition_on light [value])"
+function deconz_condition_on() {
+  deconz_condition_light "${1}" on eq "${2:-true}"
 }
 
-# Usage: condition="$(ph_condition_allon group [value])"
-function ph_condition_allon() {
-  ph_condition_group  "${1}" all_on eq "${2:-true}"
+# Usage: condition="$(deconz_condition_allon group [value])"
+function deconz_condition_allon() {
+  deconz_condition_group  "${1}" all_on eq "${2:-true}"
 }
 
-# Usage: condition="$(ph_condition_anyon group [value])"
-function ph_condition_anyon() {
-  ph_condition_group  "${1}" any_on eq "${2:-true}"
+# Usage: condition="$(deconz_condition_anyon group [value])"
+function deconz_condition_anyon() {
+  deconz_condition_group  "${1}" any_on eq "${2:-true}"
 }
 
-# Usage: condition="$(ph_condition_flag sensor [value])"
-function ph_condition_flag() {
-  ph_condition_sensor "${1}" flag eq "${2:-true}"
+# Usage: condition="$(deconz_condition_flag sensor [value])"
+function deconz_condition_flag() {
+  deconz_condition_sensor "${1}" flag eq "${2:-true}"
 }
 
-# Usage: condition="$(ph_condition_presence sensor [value])"
-function ph_condition_presence() {
-  ph_condition_sensor "${1}" presence eq "${2:-true}"
+# Usage: condition="$(deconz_condition_presence sensor [value])"
+function deconz_condition_presence() {
+  deconz_condition_sensor "${1}" presence eq "${2:-true}"
 }
 
-# Usage: condition="$(ph_condition_vibration sensor [value])"
-function ph_condition_vibration() {
-  ph_condition_sensor "${1}" vibration eq "${2:-true}"
+# Usage: condition="$(deconz_condition_vibration sensor [value])"
+function deconz_condition_vibration() {
+  deconz_condition_sensor "${1}" vibration eq "${2:-true}"
 }
 
-# Usage: condition="$(ph_condition_dark sensor [value])"
-function ph_condition_dark() {
-  ph_condition_sensor "${1}" dark eq "${2:-true}"
+# Usage: condition="$(deconz_condition_dark sensor [value])"
+function deconz_condition_dark() {
+  deconz_condition_sensor "${1}" dark eq "${2:-true}"
 }
 
-# Usage: condition="$(ph_condition_daylight sensor [value])"
-function ph_condition_daylight() {
-  ph_condition_sensor "${1}" daylight eq "${2:-true}"
+# Usage: condition="$(deconz_condition_daylight sensor [value])"
+function deconz_condition_daylight() {
+  deconz_condition_sensor "${1}" daylight eq "${2:-true}"
 }
 
-# Usage: condition="$(ph_condition_open sensor [value])"
-function ph_condition_open() {
-  ph_condition_sensor "${1}" open eq "${2:-true}"
+# Usage: condition="$(deconz_condition_open sensor [value])"
+function deconz_condition_open() {
+  deconz_condition_sensor "${1}" open eq "${2:-true}"
 }
 
-# Usage: condition="$(ph_condition_status sensor [op] value)"
-function ph_condition_status() {
-  ph_condition_sensor "${1}" status "${2}" "${3}"
+# Usage: condition="$(deconz_condition_status sensor [op] value)"
+function deconz_condition_status() {
+  deconz_condition_sensor "${1}" status "${2}" "${3}"
 }
 
-# Usage: condition="$(ph_condition_temperature sensor [op] value)"
-function ph_condition_temperature() {
-  ph_condition_sensor "${1}" temperature "${2}" "${3}"
+# Usage: condition="$(deconz_condition_temperature sensor [op] value)"
+function deconz_condition_temperature() {
+  deconz_condition_sensor "${1}" temperature "${2}" "${3}"
 }
 
-# Usage: condition="$(ph_condition_humidity sensor [op] value)"
-function ph_condition_humidity() {
-  ph_condition_sensor "${1}" humidity "${2}" "${3}"
+# Usage: condition="$(deconz_condition_humidity sensor [op] value)"
+function deconz_condition_humidity() {
+  deconz_condition_sensor "${1}" humidity "${2}" "${3}"
 }
 
-# Usage: condition="$(ph_condition_pressure sensor [op] value)"
-function ph_condition_pressure() {
-  ph_condition_sensor "${1}" pressure "${2}" "${3}"
+# Usage: condition="$(deconz_condition_pressure sensor [op] value)"
+function deconz_condition_pressure() {
+  deconz_condition_sensor "${1}" pressure "${2}" "${3}"
 }
 
-# Usage: condition="$(ph_condition_localtime [op] from to)"
-function ph_condition_localtime() {
+# Usage: condition="$(deconz_condition_localtime [op] from to)"
+function deconz_condition_localtime() {
   if [ -z "${3}" ] ; then
-    ph_condition_config localtime in "T${1}/T${2}"
+    deconz_condition_config localtime in "T${1}/T${2}"
   else
-    ph_condition_config localtime "${1}" "T${2}/T${3}"
+    deconz_condition_config localtime "${1}" "T${2}/T${3}"
   fi
 }
 
-# Usage: condition="$(ph_condition_buttonevent sensor value [value])"
-function ph_condition_buttonevent() {
+# Usage: condition="$(deconz_condition_buttonevent sensor value [value])"
+function deconz_condition_buttonevent() {
   if [ -z "${3}" ] ; then
-    echo $(ph_condition_sensor "${1}" buttonevent "${2}"),
+    echo $(deconz_condition_sensor "${1}" buttonevent "${2}"),
   else
-    echo $(ph_condition_sensor "${1}" buttonevent gt "${2}"),
-    echo $(ph_condition_sensor "${1}" buttonevent lt "${3}"),
+    echo $(deconz_condition_sensor "${1}" buttonevent gt "${2}"),
+    echo $(deconz_condition_sensor "${1}" buttonevent lt "${3}"),
   fi
-  ph_condition_dx "${1}"
+  deconz_condition_dx "${1}"
 }
 
 # ===== Actions ================================================================
 
-# Usage: action="$(ph_action address [method] [body])"
-function ph_action() {
+# Usage: action="$(deconz_action address [method] [body])"
+function deconz_action() {
   if [ -z "${3}" ] ; then
     if [ -z "${2}" -o "${2}" == PUT -o "${2}" == POST ] ; then
       echo "{
@@ -233,83 +233,83 @@ function ph_action() {
   fi
 }
 
-# Usage: action="$(ph_action_sensor_state id [method] [body])"
-function ph_action_sensor_state() {
-  ph_action "/sensors/${1}/state"  "${2}" "${3}"
+# Usage: action="$(deconz_action_sensor_state id [method] [body])"
+function deconz_action_sensor_state() {
+  deconz_action "/sensors/${1}/state"  "${2}" "${3}"
 }
 
-# Usage: action="$(ph_action_sensor_config id [method] [body])"
-function ph_action_sensor_config() {
-  ph_action "/sensors/${1}/config" "${2}" "${3}"
+# Usage: action="$(deconz_action_sensor_config id [method] [body])"
+function deconz_action_sensor_config() {
+  deconz_action "/sensors/${1}/config" "${2}" "${3}"
 }
 
-# Usage: action="$(ph_action_light_state id [method] [body])"
-function ph_action_light_state() {
-  ph_action "/lights/${1}/state"   "${2}" "${3}"
+# Usage: action="$(deconz_action_light_state id [method] [body])"
+function deconz_action_light_state() {
+  deconz_action "/lights/${1}/state"   "${2}" "${3}"
 }
 
-# Usage: action="$(ph_action_group_action id [method] [body])"
-function ph_action_group_action() {
-  ph_action "/groups/${1}/action"  "${2}" "${3}"
+# Usage: action="$(deconz_action_group_action id [method] [body])"
+function deconz_action_group_action() {
+  deconz_action "/groups/${1}/action"  "${2}" "${3}"
 }
 
-# Usage: condition="$(ph_action_flag sensor [value])"
-function ph_action_flag() {
-  ph_action_sensor_state  "${1}" "{\"flag\": ${2:-true}}"
+# Usage: condition="$(deconz_action_flag sensor [value])"
+function deconz_action_flag() {
+  deconz_action_sensor_state  "${1}" "{\"flag\": ${2:-true}}"
 }
 
-# Usage: action="$(ph_action_status sensor value)"
-function ph_action_status() {
-  ph_action_sensor_state "${1}" "{\"status\": ${2}}"
+# Usage: action="$(deconz_action_status sensor value)"
+function deconz_action_status() {
+  deconz_action_sensor_state "${1}" "{\"status\": ${2}}"
 }
 
-# Usage: action="$(ph_action_light_on light [value])"
-function ph_action_light_on() {
-  ph_action_light_state  "${1}" "{\"on\": ${2:-true}}"
+# Usage: action="$(deconz_action_light_on light [value])"
+function deconz_action_light_on() {
+  deconz_action_light_state  "${1}" "{\"on\": ${2:-true}}"
 }
 
-# Usage: action="$(ph_action_light_bri light [value])"
-function ph_action_light_bri() {
-  ph_action_light_state  "${1}" "{\"bri\": ${2:-254}}"
+# Usage: action="$(deconz_action_light_bri light [value])"
+function deconz_action_light_bri() {
+  deconz_action_light_state  "${1}" "{\"bri\": ${2:-254}}"
 }
 
-# Usage: condition="$(ph_action_blind_open blind [value])"
-function ph_action_blind_open() {
-  ph_action_light_state  "${1}" "{\"open\": ${2:-true}}"
+# Usage: condition="$(deconz_action_blind_open blind [value])"
+function deconz_action_blind_open() {
+  deconz_action_light_state  "${1}" "{\"open\": ${2:-true}}"
 }
 
-# Usage: condition="$(ph_action_blind_lift blind [value])"
-function ph_action_blind_lift() {
-  ph_action_light_state  "${1}" "{\"lift\": ${2:-100}}"
+# Usage: condition="$(deconz_action_blind_lift blind [value])"
+function deconz_action_blind_lift() {
+  deconz_action_light_state  "${1}" "{\"lift\": ${2:-100}}"
 }
 
-# Usage: condition="$(ph_action_blind_stop blind)"
-function ph_action_blind_stop() {
-  ph_action_light_state  "${1}" "{\"stop\": true}"
+# Usage: condition="$(deconz_action_blind_stop blind)"
+function deconz_action_blind_stop() {
+  deconz_action_light_state  "${1}" "{\"stop\": true}"
 }
 
-# Usage: condition="$(ph_action_group_on group [value])"
-function ph_action_group_on() {
-  ph_action_group_action  "${1}" "{\"on\": ${2:-true}}"
+# Usage: condition="$(deconz_action_group_on group [value])"
+function deconz_action_group_on() {
+  deconz_action_group_action  "${1}" "{\"on\": ${2:-true}}"
 }
 
-# Usage: action="$(ph_action_group_alert group [value])"
-function ph_action_group_alert() {
-  ph_action_group_action  "${1}" "{\"alert\": \"${2:-select}\"}"
+# Usage: action="$(deconz_action_group_alert group [value])"
+function deconz_action_group_alert() {
+  deconz_action_group_action  "${1}" "{\"alert\": \"${2:-select}\"}"
 }
 
-# Usage: action="$(ph_action_sensor_alert sensor [value])"
-function ph_action_sensor_alert() {
-  ph_action_sensor_config "${1}" "{\"alert\": \"${2:-select}\"}"
+# Usage: action="$(deconz_action_sensor_alert sensor [value])"
+function deconz_action_sensor_alert() {
+  deconz_action_sensor_config "${1}" "{\"alert\": \"${2:-select}\"}"
 }
 
-# Usage: action=$(ph_action_heatsetpoint sensor value)
-function ph_action_heatsetpoint() {
-  ph_action_sensor_config "${1}" "{\"heatsetpoint\": ${2}}"
+# Usage: action=$(deconz_action_heatsetpoint sensor value)
+function deconz_action_heatsetpoint() {
+  deconz_action_sensor_config "${1}" "{\"heatsetpoint\": ${2}}"
 }
 
-# Usage: action="$(ph_action_light_dim group [up|down|stop|wakeup])"
-function ph_action_group_dim() {
+# Usage: action="$(deconz_action_light_dim group [up|down|stop|wakeup])"
+function deconz_action_group_dim() {
   local -i value
   local -i tt
   local -i hb
@@ -320,36 +320,32 @@ function ph_action_group_dim() {
     stop)   value=0    ; tt=0    ;;
     wakeup) value=254  ; tt=6000 ;;
   esac
-  ph_action_group_action "${1}" "{\"bri_inc\": ${value}, \"transitiontime\": ${tt}}"
+  deconz_action_group_action "${1}" "{\"bri_inc\": ${value}, \"transitiontime\": ${tt}}"
 }
 
-# Usage: action="$(ph_action_scene group scene)"
-function ph_action_scene_recall() {
-  if [ "${_ph_model}" == "deCONZ" ] ; then
-    ph_action "/groups/${1}/scenes/${2}/recall"
-  else
-    ph_action_group_action "${1}" "{\"scene\": \"${2}\"}"
-  fi
+# Usage: action="$(deconz_action_scene group scene)"
+function deconz_action_scene_recall() {
+  deconz_action "/groups/${1}/scenes/${2}/recall"
 }
 
 # ===== Mirror =================================================================
 
-# ph_rules_mirror name flag host apikey
-function ph_rules_mirror() {
+# deconz_rules_mirror name flag host apikey
+function deconz_rules_mirror() {
   local name="${1}"
   local -i flag="${2}"
   local host="${3}"
   local apikey = "${4}"
 
-  ph_rule "Mirror ${name} Off" "[
-    $(ph_condition_flag ${flag} false)
+  deconz_rule "Mirror ${name} Off" "[
+    $(deconz_condition_flag ${flag} false)
   ]" "[
-    $(ph_action http://${host}/api/${apikey}/sensors/${flag}/state PUT '{"flag": false}')
+    $(deconz_action http://${host}/api/${apikey}/sensors/${flag}/state PUT '{"flag": false}')
   ]"
-  ph_rule "Mirror ${name} On" "[
-    $(ph_condition_flag ${flag})
+  deconz_rule "Mirror ${name} On" "[
+    $(deconz_condition_flag ${flag})
   ]" "[
-    $(ph_action http://${host}/api/${apikey}/sensors/${flag}/state PUT '{"flag": true}')
+    $(deconz_action http://${host}/api/${apikey}/sensors/${flag}/state PUT '{"flag": true}')
   ]"
 }
 
@@ -364,94 +360,94 @@ function ph_rules_mirror() {
 # Assuming the Hue bridge reboots because power has just been restored after a
 # power outage, we'll also set the power restored flag turn off all lights.
 
-# Usage: ph_rules_boottime boottime [flag] [daylight]
-function ph_rules_boottime() {
+# Usage: deconz_rules_boottime boottime [flag] [daylight]
+function deconz_rules_boottime() {
   local -i boottime="${1}"
   local -i flag="${2}"
   local -i daylight="${3:-1}"
 
   if [ -z "${2}" ] ; then
-    ph_rule "Boot Time" "[
-      $(ph_condition_dx ${daylight}),
-      $(ph_condition_flag ${boottime} false)
+    deconz_rule "Boot Time" "[
+      $(deconz_condition_dx ${daylight}),
+      $(deconz_condition_flag ${boottime} false)
     ]" "[
-      $(ph_action_flag ${boottime})
+      $(deconz_action_flag ${boottime})
     ]"
   else
-    ph_rule "Boot Time" "[
-      $(ph_condition_dx ${daylight}),
-      $(ph_condition_flag ${boottime} false)
+    deconz_rule "Boot Time" "[
+      $(deconz_condition_dx ${daylight}),
+      $(deconz_condition_flag ${boottime} false)
     ]" "[
-      $(ph_action_flag ${boottime}),
-      $(ph_action_flag ${flag})
+      $(deconz_action_flag ${boottime}),
+      $(deconz_action_flag ${flag})
     ]"
   fi
 }
 
 # ===== Night and Day ==========================================================
 
-# Usage: ph_rules_night night [daylight [morning evening]]
-function ph_rules_night() {
+# Usage: deconz_rules_night night [daylight [morning evening]]
+function deconz_rules_night() {
   local -i night=${1}
   local -i daylight=${2:-1}
   local morning="${3:-07:00:00}"
   local evening="${4:-23:00:00}"
 
-  ph_rule "Daylight On" "[
-    $(ph_condition_daylight ${daylight})
+  deconz_rule "Daylight On" "[
+    $(deconz_condition_daylight ${daylight})
   ]" "[
-    $(ph_action_flag ${night} false)
+    $(deconz_action_flag ${night} false)
   ]"
 
-  ph_rule "Night On" "[
-    $(ph_condition_localtime ${evening} ${morning})
+  deconz_rule "Night On" "[
+    $(deconz_condition_localtime ${evening} ${morning})
   ]" "[
-    $(ph_action_flag ${night})
+    $(deconz_action_flag ${night})
   ]"
 }
 
 # ===== Power Restore ==========================================================
 
-# Usage: ph_rules_power flag [group]
+# Usage: deconz_rules_power flag [group]
 # Flag is true when power has been restored.
-function ph_rules_power() {
+function deconz_rules_power() {
   local -i flag="${1}"
   local -i group="${2:-0}"
 
-  ph_rule "Power 1/5" "[
-    $(ph_condition_flag ${flag}),
-    $(ph_condition_dx ${flag})
+  deconz_rule "Power 1/5" "[
+    $(deconz_condition_flag ${flag}),
+    $(deconz_condition_dx ${flag})
   ]" "[
-    $(ph_action_group_on ${group} false)
+    $(deconz_action_group_on ${group} false)
   ]"
 
-  ph_rule "Power 2/5" "[
-    $(ph_condition_flag ${flag}),
-    $(ph_condition_ddx ${flag} "00:00:02")
+  deconz_rule "Power 2/5" "[
+    $(deconz_condition_flag ${flag}),
+    $(deconz_condition_ddx ${flag} "00:00:02")
   ]" "[
-    $(ph_action_group_on ${group} false)
+    $(deconz_action_group_on ${group} false)
   ]"
 
-  ph_rule "Power 3/5" "[
-    $(ph_condition_flag ${flag}),
-    $(ph_condition_ddx ${flag} "00:00:04")
+  deconz_rule "Power 3/5" "[
+    $(deconz_condition_flag ${flag}),
+    $(deconz_condition_ddx ${flag} "00:00:04")
   ]" "[
-    $(ph_action_group_on ${group} false)
+    $(deconz_action_group_on ${group} false)
   ]"
 
-  ph_rule "Power 4/5" "[
-    $(ph_condition_flag ${flag}),
-    $(ph_condition_ddx ${flag} "00:00:06")
+  deconz_rule "Power 4/5" "[
+    $(deconz_condition_flag ${flag}),
+    $(deconz_condition_ddx ${flag} "00:00:06")
   ]" "[
-    $(ph_action_group_on ${group} false)
+    $(deconz_action_group_on ${group} false)
   ]"
 
-  ph_rule "Power 5/5" "[
-    $(ph_condition_flag ${flag}),
-    $(ph_condition_ddx ${flag} "00:00:08")
+  deconz_rule "Power 5/5" "[
+    $(deconz_condition_flag ${flag}),
+    $(deconz_condition_ddx ${flag} "00:00:08")
   ]" "[
-    $(ph_action_group_on ${group} false),
-    $(ph_action_flag ${flag} false)
+    $(deconz_action_group_on ${group} false),
+    $(deconz_action_flag ${flag} false)
   ]"
 }
 
@@ -474,68 +470,68 @@ function ph_rules_power() {
 # HomeKit where the flag is exposed as switch.  The lights are controlled from
 # the flag (in combination with the time of day and lightlevel).
 
-# Usage: ph_rules room status flag [group]
-function ph_rules_status() {
+# Usage: deconz_rules room status flag [group]
+function deconz_rules_status() {
   local room="${1}"
   local -i status=${2}
   local -i flag=${3}
   local -i group=${4}
 
-  ph_rule "${room} Off" "[
-    $(ph_condition_flag ${flag} false),
-    $(ph_condition_dx ${flag}),
-    $(ph_condition_status ${status} gt 0)
+  deconz_rule "${room} Off" "[
+    $(deconz_condition_flag ${flag} false),
+    $(deconz_condition_dx ${flag}),
+    $(deconz_condition_status ${status} gt 0)
   ]" "[
-    $(ph_action_status ${status} 0)
+    $(deconz_action_status ${status} 0)
   ]"
 
-  ph_rule "${room} Status <1" "[
-    $(ph_condition_status ${status} lt 1)
+  deconz_rule "${room} Status <1" "[
+    $(deconz_condition_status ${status} lt 1)
   ]" "[
-    $(ph_action_flag ${flag} false)
+    $(deconz_action_flag ${flag} false)
   ]"
 
-  ph_rule "${room} Status >0" "[
-    $(ph_condition_status ${status} gt 0)
+  deconz_rule "${room} Status >0" "[
+    $(deconz_condition_status ${status} gt 0)
   ]" "[
-    $(ph_action_flag ${flag})
+    $(deconz_action_flag ${flag})
   ]"
 
   if [ ! -z "${4}" ] ; then
-    ph_rule "${room} Status 2" "[
-      $(ph_condition_status ${status} 2),
-      $(ph_condition_ddx ${status} "00:00:15")
+    deconz_rule "${room} Status 2" "[
+      $(deconz_condition_status ${status} 2),
+      $(deconz_condition_ddx ${status} "00:00:15")
     ]" "[
-      $(ph_action_status ${status} 1)
+      $(deconz_action_status ${status} 1)
     ]"
 
-    ph_rule "${room} Status 3 (1/3)" "[
-      $(ph_condition_status ${status} 3),
-      $(ph_condition_ddx ${status} "00:04:00"),
-      $(ph_condition_flag ${flag})
+    deconz_rule "${room} Status 3 (1/3)" "[
+      $(deconz_condition_status ${status} 3),
+      $(deconz_condition_ddx ${status} "00:04:00"),
+      $(deconz_condition_flag ${flag})
     ]" "[
-      $(ph_action_group_alert ${group} breathe)
+      $(deconz_action_group_alert ${group} breathe)
     ]"
 
-    ph_rule "${room} Status 3 (2/3)" "[
-      $(ph_condition_status ${status} 3),
-      $(ph_condition_ddx ${status} "00:04:01"),
-      $(ph_condition_flag ${flag})
+    deconz_rule "${room} Status 3 (2/3)" "[
+      $(deconz_condition_status ${status} 3),
+      $(deconz_condition_ddx ${status} "00:04:01"),
+      $(deconz_condition_flag ${flag})
     ]" "[
-      $(ph_action_group_alert ${group} finish)
+      $(deconz_action_group_alert ${group} finish)
     ]"
 
-    ph_rule "${room} Status 3 (3/3)" "[
-      $(ph_condition_status ${status} 3),
-      $(ph_condition_ddx ${status} "00:05:00")
+    deconz_rule "${room} Status 3 (3/3)" "[
+      $(deconz_condition_status ${status} 3),
+      $(deconz_condition_ddx ${status} "00:05:00")
     ]" "[
-      $(ph_action_status ${status} 0)
+      $(deconz_action_status ${status} 0)
     ]"
   fi
 }
 
-# Usage: ph_rules_wakeup room status flag group night scene
-function ph_rules_wakeup() {
+# Usage: deconz_rules_wakeup room status flag group night scene
+function deconz_rules_wakeup() {
   local room="${1}"
   local -i status=${2}
   local -i flag=${3}
@@ -543,25 +539,25 @@ function ph_rules_wakeup() {
   local -i night=${5}
   local scene="${6}"
 
-  ph_rule "${room} Wakeup 1/3" "[
-    $(ph_condition_status ${status} -2)
+  deconz_rule "${room} Wakeup 1/3" "[
+    $(deconz_condition_status ${status} -2)
   ]" "[
-    $(ph_action_scene_recall ${group} ${scene}),
-    $(ph_action_flag ${night} false)
+    $(deconz_action_scene_recall ${group} ${scene}),
+    $(deconz_action_flag ${night} false)
   ]"
 
-  ph_rule "${room} Wakeup 2/3" "[
-    $(ph_condition_status ${status} -2),
-    $(ph_condition_ddx ${status} status "00:00:10")
+  deconz_rule "${room} Wakeup 2/3" "[
+    $(deconz_condition_status ${status} -2),
+    $(deconz_condition_ddx ${status} status "00:00:10")
   ]" "[
-    $(ph_action_group_dim ${group} wakeup)
+    $(deconz_action_group_dim ${group} wakeup)
   ]"
 
-  ph_rule "${room} Wakeup 3/3" "[
-    $(ph_condition_status ${status} -2),
-    $(ph_condition_ddx ${status} status "00:10:10")
+  deconz_rule "${room} Wakeup 3/3" "[
+    $(deconz_condition_status ${status} -2),
+    $(deconz_condition_ddx ${status} status "00:10:10")
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(deconz_action_status ${status} 1)
   ]"
 }
 
@@ -577,142 +573,142 @@ function ph_rules_wakeup() {
 #   15 seconds (status 3).  A warning is given at 1 minute's notice before the
 #   lights are turned off.
 
-# Usage: ph_rules_motion room status motion [timeout]
-function ph_rules_motion() {
+# Usage: deconz_rules_motion room status motion [timeout]
+function deconz_rules_motion() {
   local room="${1}"
   local -i status=${2}
   local -i motion=${3}
   local timeout=${4}
 
   if [ -z "${timeout}" ] ; then
-    ph_rule "${room} Motion Clear" "[
-      $(ph_condition_presence ${motion} false),
-      $(ph_condition_dx ${motion} presence),
-      $(ph_condition_status ${status} 2)
+    deconz_rule "${room} Motion Clear" "[
+      $(deconz_condition_presence ${motion} false),
+      $(deconz_condition_dx ${motion} presence),
+      $(deconz_condition_status ${status} 2)
     ]" "[
-      $(ph_action_status ${status} 3)
+      $(deconz_action_status ${status} 3)
     ]"
-    ph_rule "${room} No Motion" "[
-      $(ph_condition_presence ${motion} false),
-      $(ph_condition_ddx ${motion} presence "00:55:00"),
-      $(ph_condition_status ${status} gt 0),
-      $(ph_condition_status ${status} lt 4)
+    deconz_rule "${room} No Motion" "[
+      $(deconz_condition_presence ${motion} false),
+      $(deconz_condition_ddx ${motion} presence "00:55:00"),
+      $(deconz_condition_status ${status} gt 0),
+      $(deconz_condition_status ${status} lt 4)
     ]" "[
-      $(ph_action_status ${status} 3)
+      $(deconz_action_status ${status} 3)
     ]"
   else
-    ph_rule "${room} Motion Clear" "[
-      $(ph_condition_presence ${motion} false),
-      $(ph_condition_ddx ${motion} presence ${timeout}),
-      $(ph_condition_status ${status} gt 0),
-      $(ph_condition_status ${status} lt 4)
+    deconz_rule "${room} Motion Clear" "[
+      $(deconz_condition_presence ${motion} false),
+      $(deconz_condition_ddx ${motion} presence ${timeout}),
+      $(deconz_condition_status ${status} gt 0),
+      $(deconz_condition_status ${status} lt 4)
     ]" "[
-      $(ph_action_status ${status} 0)
+      $(deconz_action_status ${status} 0)
     ]"
   fi
-  ph_rule "${room} Motion Detected" "[
-    $(ph_condition_presence ${motion}),
-    $(ph_condition_dx ${motion} presence),
-    $(ph_condition_status ${status} gt -1),
-    $(ph_condition_status ${status} lt 4)
+  deconz_rule "${room} Motion Detected" "[
+    $(deconz_condition_presence ${motion}),
+    $(deconz_condition_dx ${motion} presence),
+    $(deconz_condition_status ${status} gt -1),
+    $(deconz_condition_status ${status} lt 4)
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(deconz_action_status ${status} 1)
   ]"
 }
 
-# Usage: ph_rules_motion room status presence motion
-function ph_rules_presence() {
+# Usage: deconz_rules_motion room status presence motion
+function deconz_rules_presence() {
   local room="${1}"
   local -i status=${2}
   local -i presence=${3}
   local -i motion=${4}
 
-  ph_rule "${room} Motion Detected" "[
-    $(ph_condition_presence ${motion}),
-    $(ph_condition_dx ${motion} presence),
-    $(ph_condition_status ${status} gt -1),
-    $(ph_condition_status ${status} lt 4)
+  deconz_rule "${room} Motion Detected" "[
+    $(deconz_condition_presence ${motion}),
+    $(deconz_condition_dx ${motion} presence),
+    $(deconz_condition_status ${status} gt -1),
+    $(deconz_condition_status ${status} lt 4)
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(deconz_action_status ${status} 1)
   ]"
 
   # ddx condition as workaround for deCONZ DDF bug
-  ph_rule "${room} Presence Clear" "[
-    $(ph_condition_presence ${presence} false),
-    $(ph_condition_presence ${motion} false),
-    $(ph_condition_ddx ${motion} presence "00:00:45"),
-    $(ph_condition_status ${status} gt 0),
-    $(ph_condition_status ${status} lt 4)
+  deconz_rule "${room} Presence Clear" "[
+    $(deconz_condition_presence ${presence} false),
+    $(deconz_condition_presence ${motion} false),
+    $(deconz_condition_ddx ${motion} presence "00:00:45"),
+    $(deconz_condition_status ${status} gt 0),
+    $(deconz_condition_status ${status} lt 4)
   ]" "[
-    $(ph_action_status ${status} 0)
+    $(deconz_action_status ${status} 0)
   ]"
 }
 
-# Usage: ph_rules_vibration room status vibration [timeout]
-function ph_rules_vibration() {
+# Usage: deconz_rules_vibration room status vibration [timeout]
+function deconz_rules_vibration() {
   local room="${1}"
   local -i status=${2}
   local -i vibration=${3}
   local timeout=${4}
 
-  ph_rule "${room} Vibration Detected" "[
-    $(ph_condition_vibration ${vibration}),
-    $(ph_condition_dx ${vibration} vibration),
-    $(ph_condition_status ${status} gt 0),
-    $(ph_condition_status ${status} lt 4)
+  deconz_rule "${room} Vibration Detected" "[
+    $(deconz_condition_vibration ${vibration}),
+    $(deconz_condition_dx ${vibration} vibration),
+    $(deconz_condition_status ${status} gt 0),
+    $(deconz_condition_status ${status} lt 4)
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(deconz_action_status ${status} 1)
   ]"
 }
 
-# Usage: ph_rules_room room status room2 motion
-function ph_rules_leave_room() {
+# Usage: deconz_rules_room room status room2 motion
+function deconz_rules_leave_room() {
   local room="${1}"
   local -i status=${2}
   local room2="${3}"
   local -i motion=${4}
 
-  ph_rule "${room} to ${room2}" "[
-    $(ph_condition_presence ${motion}),
-    $(ph_condition_dx ${motion} presence),
-    $(ph_condition_status ${status} 1)
+  deconz_rule "${room} to ${room2}" "[
+    $(deconz_condition_presence ${motion}),
+    $(deconz_condition_dx ${motion} presence),
+    $(deconz_condition_status ${status} 1)
   ]" "[
-    $(ph_action_status ${status} 2)
+    $(deconz_action_status ${status} 2)
   ]"
 }
 
 # ===== Door Sensors ===========================================================
 
-# Usage: ph_rules_room room status door [noclose]
-function ph_rules_door() {
+# Usage: deconz_rules_room room status door [noclose]
+function deconz_rules_door() {
   local room="${1}"
   local -i status=${2}
   local -i door=${3}
   local noclose="${4}"
 
   if [ -z "${noclose}" ] ; then
-    ph_rule "${room} Door Close" "[
-      $(ph_condition_open ${door} false),
-      $(ph_condition_dx ${door} open),
-      $(ph_condition_status ${status} gt -1)
+    deconz_rule "${room} Door Close" "[
+      $(deconz_condition_open ${door} false),
+      $(deconz_condition_dx ${door} open),
+      $(deconz_condition_status ${status} gt -1)
     ]" "[
-      $(ph_action_status ${status} 0)
+      $(deconz_action_status ${status} 0)
     ]"
   fi
 
-  ph_rule "${room} Door Open" "[
-    $(ph_condition_open ${door}),
-    $(ph_condition_dx ${door} open),
-    $(ph_condition_status ${status} gt -1)
+  deconz_rule "${room} Door Open" "[
+    $(deconz_condition_open ${door}),
+    $(deconz_condition_dx ${door} open),
+    $(deconz_condition_status ${status} gt -1)
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(deconz_action_status ${status} 1)
   ]"
 }
 
 # ===== Switches ===============================================================
 
-# Usage: ph_rules_dimmer_onoff room status flag dimmer motion group scene
-function ph_rules_dimmer_onoff() {
+# Usage: deconz_rules_dimmer_onoff room status flag dimmer motion group scene
+function deconz_rules_dimmer_onoff() {
   local room="${1}"
   local -i status=${2}
   local -i flag=${3}
@@ -721,58 +717,58 @@ function ph_rules_dimmer_onoff() {
   local -i group=${6}
   local -i scene=${7}
 
-  ph_rule "${room} Dimmer Off Press" "[
-    $(ph_condition_buttonevent ${dimmer} 4002)
+  deconz_rule "${room} Dimmer Off Press" "[
+    $(deconz_condition_buttonevent ${dimmer} 4002)
   ]" "[
-    $(ph_action_status ${status} 0)
+    $(deconz_action_status ${status} 0)
   ]"
 
   # Disable room automation.  Flash motion sensor light as confirmation.
-  ph_rule "${room} Dimmer Off Hold" "[
-    $(ph_condition_buttonevent ${dimmer} 4001)
+  deconz_rule "${room} Dimmer Off Hold" "[
+    $(deconz_condition_buttonevent ${dimmer} 4001)
   ]" "[
-    $(ph_action_sensor_alert ${motion}),
-    $(ph_action_status ${status} -1)
+    $(deconz_action_sensor_alert ${motion}),
+    $(deconz_action_status ${status} -1)
   ]"
 
-  ph_rule "${room} Dimmer On Press" "[
-    $(ph_condition_buttonevent ${dimmer} 1002)
+  deconz_rule "${room} Dimmer On Press" "[
+    $(deconz_condition_buttonevent ${dimmer} 1002)
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(deconz_action_status ${status} 1)
   ]"
 
   # Set default scene.
-  ph_rule "${room} Dimmer On Hold" "[
-  $(ph_condition_buttonevent ${dimmer} 1001)
+  deconz_rule "${room} Dimmer On Hold" "[
+  $(deconz_condition_buttonevent ${dimmer} 1001)
   ]" "[
-    $(ph_action_scene_recall ${group} ${scene})
+    $(deconz_action_scene_recall ${group} ${scene})
   ]"
 }
 
-# Usage: ph_rules_switch_toggle room status flag switch
-function ph_rules_switch_toggle() {
+# Usage: deconz_rules_switch_toggle room status flag switch
+function deconz_rules_switch_toggle() {
   local room="${1}"
   local -i status=${2}
   local -i flag=${3}
   local -i switch=${4}
 
-  ph_rule "${room} Switch On/Off Press (1/2)" "[
-    $(ph_condition_buttonevent ${switch} 1002),
-    $(ph_condition_status ${status} gt 0)
+  deconz_rule "${room} Switch On/Off Press (1/2)" "[
+    $(deconz_condition_buttonevent ${switch} 1002),
+    $(deconz_condition_status ${status} gt 0)
   ]" "[
-    $(ph_action_status ${status} 0)
+    $(deconz_action_status ${status} 0)
   ]"
 
-  ph_rule "${room} Switch On/Off Press (2/2)" "[
-    $(ph_condition_buttonevent ${switch} 1002),
-    $(ph_condition_status ${status} lt 1)
+  deconz_rule "${room} Switch On/Off Press (2/2)" "[
+    $(deconz_condition_buttonevent ${switch} 1002),
+    $(deconz_condition_status ${status} lt 1)
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(deconz_action_status ${status} 1)
   ]"
 }
 
-# Usage: ph_rules_switch_foh room status switch group [left|right|both]
-function ph_rules_switch_foh() {
+# Usage: deconz_rules_switch_foh room status switch group [left|right|both]
+function deconz_rules_switch_foh() {
   local room="${1}"
   local -i status=${2}
   local -i switch=${3}
@@ -784,79 +780,79 @@ function ph_rules_switch_foh() {
     "")      up=1; down=2; name="" ;;
   esac
 
-  ph_rule "${room} Switch Up${name} Press" "[
-    $(ph_condition_buttonevent ${switch} ${up}002)
+  deconz_rule "${room} Switch Up${name} Press" "[
+    $(deconz_condition_buttonevent ${switch} ${up}002)
   ]" "[
-    $(ph_action_status ${status} 1)
+    $(deconz_action_status ${status} 1)
   ]"
 
-  ph_rule "${room} Switch Up${name} Hold" "[
-    $(ph_condition_buttonevent ${switch} ${up}001)
+  deconz_rule "${room} Switch Up${name} Hold" "[
+    $(deconz_condition_buttonevent ${switch} ${up}001)
   ]" "[
-    $(ph_action_group_on "${group}"),
-    $(ph_action_group_dim "${group}" up)
+    $(deconz_action_group_on "${group}"),
+    $(deconz_action_group_dim "${group}" up)
   ]"
 
-  ph_rule "${room} Switch Up${name} Release" "[
-    $(ph_condition_buttonevent ${switch} ${up}003)
+  deconz_rule "${room} Switch Up${name} Release" "[
+    $(deconz_condition_buttonevent ${switch} ${up}003)
   ]" "[
-    $(ph_action_group_dim ${group} stop)
+    $(deconz_action_group_dim ${group} stop)
   ]"
 
-  ph_rule "${room} Switch Down${name} Press" "[
-    $(ph_condition_buttonevent ${switch} ${down}002)
+  deconz_rule "${room} Switch Down${name} Press" "[
+    $(deconz_condition_buttonevent ${switch} ${down}002)
   ]" "[
-    $(ph_action_status ${status} 0)
+    $(deconz_action_status ${status} 0)
   ]"
 
-  ph_rule "${room} Switch Down${name} Hold" "[
-    $(ph_condition_buttonevent ${switch} ${down}001)
+  deconz_rule "${room} Switch Down${name} Hold" "[
+    $(deconz_condition_buttonevent ${switch} ${down}001)
   ]" "[
-    $(ph_action_group_dim "${group}" down)
+    $(deconz_action_group_dim "${group}" down)
   ]"
 
-  ph_rule "${room} Switch Down${name} Release" "[
-    $(ph_condition_buttonevent ${switch} ${down}003)
+  deconz_rule "${room} Switch Down${name} Release" "[
+    $(deconz_condition_buttonevent ${switch} ${down}003)
   ]" "[
-    $(ph_action_group_dim ${group} stop)
+    $(deconz_action_group_dim ${group} stop)
   ]"
 }
 
-# Usage: ph_rules_dimmer_updown room dimmer group
-function ph_rules_dimmer_updown() {
+# Usage: deconz_rules_dimmer_updown room dimmer group
+function deconz_rules_dimmer_updown() {
   local room="${1}"
   local -i dimmer=${2}
   local -i group=${3}
 
-  ph_rule "${room} Dimmer Up Press" "[
-    $(ph_condition_buttonevent ${dimmer} 2000)
+  deconz_rule "${room} Dimmer Up Press" "[
+    $(deconz_condition_buttonevent ${dimmer} 2000)
   ]" "[
-    $(ph_action_group_dim ${group} up)
+    $(deconz_action_group_dim ${group} up)
   ]"
 
-  ph_rule "${room} Dimmer Up Release" "[
-    $(ph_condition_buttonevent ${dimmer} 2001 2004)
+  deconz_rule "${room} Dimmer Up Release" "[
+    $(deconz_condition_buttonevent ${dimmer} 2001 2004)
   ]" "[
-    $(ph_action_group_dim ${group} stop)
+    $(deconz_action_group_dim ${group} stop)
   ]"
 
-  ph_rule "${room} Dimmer Down Press" "[
-    $(ph_condition_buttonevent ${dimmer} 3000)
+  deconz_rule "${room} Dimmer Down Press" "[
+    $(deconz_condition_buttonevent ${dimmer} 3000)
   ]" "[
-    $(ph_action_group_dim ${group} down)
+    $(deconz_action_group_dim ${group} down)
   ]"
 
-  ph_rule "${room} Dimmer Down Release" "[
-    $(ph_condition_buttonevent ${dimmer} 3001 3004)
+  deconz_rule "${room} Dimmer Down Release" "[
+    $(deconz_condition_buttonevent ${dimmer} 3001 3004)
   ]" "[
-    $(ph_action_group_dim ${group} stop)
+    $(deconz_action_group_dim ${group} stop)
   ]"
 }
 
 # ===== Lights =================================================================
 
-# Usage: ph_rules_light room flag group night default nightmode [lightlevel [status tv]]
-function ph_rules_light() {
+# Usage: deconz_rules_light room flag group night default nightmode [lightlevel [status tv]]
+function deconz_rules_light() {
   local room="${1}"
   local -i flag=${2}
   local -i group=${3}
@@ -867,190 +863,190 @@ function ph_rules_light() {
   local -i status=${8}
   local tv="${9}"
 
-  ph_rule "${room} Off" "[
-    $(ph_condition_flag ${flag} false)
+  deconz_rule "${room} Off" "[
+    $(deconz_condition_flag ${flag} false)
   ]" "[
-    $(ph_action_group_on ${group} false)
+    $(deconz_action_group_on ${group} false)
   ]"
 
   if [ -z "${7}" ] ; then
-    ph_rule "${room} On, Day" "[
-      $(ph_condition_flag ${flag}),
-      $(ph_condition_flag ${night} false)
+    deconz_rule "${room} On, Day" "[
+      $(deconz_condition_flag ${flag}),
+      $(deconz_condition_flag ${night} false)
     ]" "[
-      $(ph_action_scene_recall ${group} ${default})
+      $(deconz_action_scene_recall ${group} ${default})
     ]"
 
-    ph_rule "${room} On, Night" "[
-      $(ph_condition_flag ${flag}),
-      $(ph_condition_flag ${night})
+    deconz_rule "${room} On, Night" "[
+      $(deconz_condition_flag ${flag}),
+      $(deconz_condition_flag ${night})
     ]" "[
-      $(ph_action_scene_recall ${group} ${nightmode})
+      $(deconz_action_scene_recall ${group} ${nightmode})
     ]"
 
     return
   fi
 
-  local type=$(ph_unquote $(ph get "/sensors/${lightlevel}/type"))
+  local type=$(deconz_unquote $(deconz get "/sensors/${lightlevel}/type"))
   if [ "${type}" == "Daylight" ] ; then
-    if [ "${_ph_model}" == "deCONZ" ] ; then
+    if [ "${_deconz_model}" == "deCONZ" ] ; then
       # lightlevel is Daylight sensor on deCONZ gateway
-      ph_rule "${room} On, Not Dark" "[
-        $(ph_condition_flag ${flag}),
-        $(ph_condition_status ${lightlevel} gt 125),
-        $(ph_condition_status ${lightlevel} lt 205)
+      deconz_rule "${room} On, Not Dark" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_status ${lightlevel} gt 125),
+        $(deconz_condition_status ${lightlevel} lt 205)
       ]" "[
-        $(ph_action_group_on ${group} false)
+        $(deconz_action_group_on ${group} false)
       ]"
 
-      ph_rule "${room} On, Dark 1, Day" "[
-        $(ph_condition_flag ${flag}),
-        $(ph_condition_status ${lightlevel} lt 125),
-        $(ph_condition_flag ${night} false)
+      deconz_rule "${room} On, Dark 1, Day" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_status ${lightlevel} lt 125),
+        $(deconz_condition_flag ${night} false)
       ]" "[
-        $(ph_action_scene_recall ${group} ${default})
+        $(deconz_action_scene_recall ${group} ${default})
       ]"
 
-      ph_rule "${room} On, Dark 2, Day" "[
-        $(ph_condition_flag ${flag}),
-        $(ph_condition_status ${lightlevel} gt 205),
-        $(ph_condition_flag ${night} false)
+      deconz_rule "${room} On, Dark 2, Day" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_status ${lightlevel} gt 205),
+        $(deconz_condition_flag ${night} false)
       ]" "[
-        $(ph_action_scene_recall ${group} ${default})
+        $(deconz_action_scene_recall ${group} ${default})
       ]"
 
-      ph_rule "${room} On, Dark 1, Night" "[
-        $(ph_condition_flag ${flag}),
-        $(ph_condition_status ${lightlevel} lt 125),
-        $(ph_condition_flag ${night})
+      deconz_rule "${room} On, Dark 1, Night" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_status ${lightlevel} lt 125),
+        $(deconz_condition_flag ${night})
       ]" "[
-        $(ph_action_scene_recall ${group} ${nightmode})
+        $(deconz_action_scene_recall ${group} ${nightmode})
       ]"
 
-      ph_rule "${room} On, Dark 2, Night" "[
-        $(ph_condition_flag ${flag}),
-        $(ph_condition_status ${lightlevel} gt 205),
-        $(ph_condition_flag ${night})
+      deconz_rule "${room} On, Dark 2, Night" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_status ${lightlevel} gt 205),
+        $(deconz_condition_flag ${night})
       ]" "[
-        $(ph_action_scene_recall ${group} ${nightmode})
+        $(deconz_action_scene_recall ${group} ${nightmode})
       ]"
     else
       # lightlevel is Daylight sensor on Hue bridge
-      ph_rule "${room} On, Daylight" "[
-        $(ph_condition_flag ${flag}),
-        $(ph_condition_daylight ${lightlevel})
+      deconz_rule "${room} On, Daylight" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_daylight ${lightlevel})
       ]" "[
-        $(ph_action_group_on ${group} false)
+        $(deconz_action_group_on ${group} false)
       ]"
 
-      ph_rule "${room} On, Not Daylight, Day" "[
-        $(ph_condition_flag ${flag}),
-        $(ph_condition_daylight ${lightlevel} false),
-        $(ph_condition_flag ${night} false)
+      deconz_rule "${room} On, Not Daylight, Day" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_daylight ${lightlevel} false),
+        $(deconz_condition_flag ${night} false)
       ]" "[
-        $(ph_action_scene_recall ${group} ${default})
+        $(deconz_action_scene_recall ${group} ${default})
       ]"
 
-      ph_rule "${room} On, Not Daylight, Night" "[
-        $(ph_condition_flag ${flag}),
-        $(ph_condition_daylight ${lightlevel} false),
-        $(ph_condition_flag ${night})
+      deconz_rule "${room} On, Not Daylight, Night" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_daylight ${lightlevel} false),
+        $(deconz_condition_flag ${night})
       ]" "[
-        $(ph_action_scene_recall ${group} ${nightmode})
+        $(deconz_action_scene_recall ${group} ${nightmode})
       ]"
     fi
   else
     # lightlevel is a ZHALightLevel sensor
-    ph_rule "${room} On, Daylight" "[
-      $(ph_condition_flag ${flag}),
-      $(ph_condition_daylight ${lightlevel})
+    deconz_rule "${room} On, Daylight" "[
+      $(deconz_condition_flag ${flag}),
+      $(deconz_condition_daylight ${lightlevel})
     ]" "[
-      $(ph_action_group_on ${group} false)
+      $(deconz_action_group_on ${group} false)
     ]"
 
     if [ -z "${8}" ] ; then
-      ph_rule "${room} On, Dark, Day" "[
-        $(ph_condition_flag ${flag}),
-        $(ph_condition_dark ${lightlevel}),
-        $(ph_condition_flag ${night} false)
+      deconz_rule "${room} On, Dark, Day" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_dark ${lightlevel}),
+        $(deconz_condition_flag ${night} false)
       ]" "[
-        $(ph_action_scene_recall ${group} ${default})
+        $(deconz_action_scene_recall ${group} ${default})
       ]"
     else
-      ph_rule "${room} On, TV Off, Dark, Day" "[
-        $(ph_condition_flag ${flag}),
-        $(ph_condition_status ${status} lt 4),
-        $(ph_condition_dark ${lightlevel}),
-        $(ph_condition_flag ${night} false)
+      deconz_rule "${room} On, TV Off, Dark, Day" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_status ${status} lt 4),
+        $(deconz_condition_dark ${lightlevel}),
+        $(deconz_condition_flag ${night} false)
       ]" "[
-        $(ph_action_scene_recall ${group} ${default})
+        $(deconz_action_scene_recall ${group} ${default})
       ]"
 
-      ph_rule "${room} On, TV On, Dark, Day" "[
-        $(ph_condition_flag ${flag}),
-        $(ph_condition_status ${status} 4),
-        $(ph_condition_dark ${lightlevel}),
-        $(ph_condition_flag ${night} false)
+      deconz_rule "${room} On, TV On, Dark, Day" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_status ${status} 4),
+        $(deconz_condition_dark ${lightlevel}),
+        $(deconz_condition_flag ${night} false)
       ]" "[
-        $(ph_action_scene_recall ${group} ${tv})
+        $(deconz_action_scene_recall ${group} ${tv})
       ]"
 
-      ph_rule "${room} On, TV On, Not Daylight, Day" "[
-        $(ph_condition_flag ${flag}),
-        $(ph_condition_status ${status} 4),
-        $(ph_condition_dx ${status} status),
-        $(ph_condition_daylight ${lightlevel} false),
-        $(ph_condition_flag ${night} false)
+      deconz_rule "${room} On, TV On, Not Daylight, Day" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_status ${status} 4),
+        $(deconz_condition_dx ${status} status),
+        $(deconz_condition_daylight ${lightlevel} false),
+        $(deconz_condition_flag ${night} false)
       ]" "[
-        $(ph_action_scene_recall ${group} ${tv})
+        $(deconz_action_scene_recall ${group} ${tv})
       ]"
     fi
 
-    ph_rule "${room} On, Dark, Night" "[
-      $(ph_condition_flag ${flag}),
-      $(ph_condition_dark ${lightlevel}),
-      $(ph_condition_flag ${night})
+    deconz_rule "${room} On, Dark, Night" "[
+      $(deconz_condition_flag ${flag}),
+      $(deconz_condition_dark ${lightlevel}),
+      $(deconz_condition_flag ${night})
     ]" "[
-      $(ph_action_scene_recall ${group} ${nightmode})
+      $(deconz_action_scene_recall ${group} ${nightmode})
     ]"
 
-    ph_rule "${room} On, Not Daylight, Night" "[
-      $(ph_condition_flag ${flag}),
-      $(ph_condition_daylight ${lightlevel} false),
-      $(ph_condition_flag ${night}),
-      $(ph_condition_dx ${night} flag)
+    deconz_rule "${room} On, Not Daylight, Night" "[
+      $(deconz_condition_flag ${flag}),
+      $(deconz_condition_daylight ${lightlevel} false),
+      $(deconz_condition_flag ${night}),
+      $(deconz_condition_dx ${night} flag)
     ]" "[
-      $(ph_action_scene_recall ${group} ${nightmode})
+      $(deconz_action_scene_recall ${group} ${nightmode})
     ]"
   fi
 }
 
 # ===== Fan ====================================================================
 
-# Usage: ph_rules_fan room flag fan temperature
-function ph_rules_fan() {
+# Usage: deconz_rules_fan room flag fan temperature
+function deconz_rules_fan() {
   local room="${1}"
   local -i flag=${2}
   local -i fan=${3}
   local -i temperature=${4}
 
-  ph_rule "${room} Off" "[
-    $(ph_condition_flag ${flag} false)
+  deconz_rule "${room} Off" "[
+    $(deconz_condition_flag ${flag} false)
   ]" "[
-    $(ph_action_light_on ${fan} false)
+    $(deconz_action_light_on ${fan} false)
   ]"
 
-  ph_rule "${room} Cool" "[
-    $(ph_condition_temperature ${temperature} lt 2250)
+  deconz_rule "${room} Cool" "[
+    $(deconz_condition_temperature ${temperature} lt 2250)
   ]" "[
-    $(ph_action_light_on ${fan} false)
+    $(deconz_action_light_on ${fan} false)
   ]"
 
-  ph_rule "${room} Hot" "[
-    $(ph_condition_flag ${flag}),
-    $(ph_condition_temperature ${temperature} gt 2300)
+  deconz_rule "${room} Hot" "[
+    $(deconz_condition_flag ${flag}),
+    $(deconz_condition_temperature ${temperature} gt 2300)
   ]" "[
-    $(ph_action_light_on ${fan})
+    $(deconz_action_light_on ${fan})
   ]"
 }
 
@@ -1061,8 +1057,8 @@ function ph_rules_fan() {
 # - Prevent motion sensor from turning on room when curtains close.  Probably
 #   need an additional status or flag for that.
 
-# Usage: ph_rules_curtains room status curtains motion temperature [daylight]
-function ph_rules_curtains() {
+# Usage: deconz_rules_curtains room status curtains motion temperature [daylight]
+function deconz_rules_curtains() {
   local room="${1}"
   local -i status=${2}
   local -i curtains=${3}
@@ -1070,89 +1066,89 @@ function ph_rules_curtains() {
   local -i temperature=${5}
   local -i daylight="${6:-1}"
 
-  ph_rule "${room} Curtains Sunset" "[
-    $(ph_condition_daylight ${daylight} false)
+  deconz_rule "${room} Curtains Sunset" "[
+    $(deconz_condition_daylight ${daylight} false)
   ]" "[
-    $(ph_action_sensor_config ${motion} '{"on": false}'),
-    $(ph_action_blind_open ${curtains} false)
+    $(deconz_action_sensor_config ${motion} '{"on": false}'),
+    $(deconz_action_blind_open ${curtains} false)
   ]"
 
-  ph_rule "${room} Curtains Sunrise" "[
-    $(ph_condition_status ${status} gt -1),
-    $(ph_condition_daylight ${daylight}),
-    $(ph_condition_localtime "23:00:00" "13:00:00")
+  deconz_rule "${room} Curtains Sunrise" "[
+    $(deconz_condition_status ${status} gt -1),
+    $(deconz_condition_daylight ${daylight}),
+    $(deconz_condition_localtime "23:00:00" "13:00:00")
   ]" "[
-    $(ph_action_sensor_config ${motion} '{"on": false}'),
-    $(ph_action_blind_open ${curtains})
-  ]"
-
-  # TODO: change time to lightlevel when sun shines into room
-  ph_rule "${room} Curtains Cool, Daylight" "[
-    $(ph_condition_temperature ${temperature} lt 2250),
-    $(ph_condition_daylight ${daylight}),
-    $(ph_condition_localtime "13:00:00" "23:00:00")
-  ]" "[
-    $(ph_action_sensor_config ${motion} '{"on": false}'),
-    $(ph_action_blind_open ${curtains})
+    $(deconz_action_sensor_config ${motion} '{"on": false}'),
+    $(deconz_action_blind_open ${curtains})
   ]"
 
   # TODO: change time to lightlevel when sun shines into room
-  ph_rule "${room} Curtains Hot, Daylight" "[
-    $(ph_condition_temperature ${temperature} gt 2300),
-    $(ph_condition_daylight ${daylight}),
-    $(ph_condition_localtime "13:00:00" "23:00:00")
+  deconz_rule "${room} Curtains Cool, Daylight" "[
+    $(deconz_condition_temperature ${temperature} lt 2250),
+    $(deconz_condition_daylight ${daylight}),
+    $(deconz_condition_localtime "13:00:00" "23:00:00")
   ]" "[
-    $(ph_action_sensor_config ${motion} '{"on": false}'),
-    $(ph_action_blind_open ${curtains} false)
+    $(deconz_action_sensor_config ${motion} '{"on": false}'),
+    $(deconz_action_blind_open ${curtains})
   ]"
 
-  ph_rule "${room} Curtains Reset Motion" "[
-    $(ph_condition_sensor_config ${motion} on eq false),
-    $(ph_condition_sensor_config ${motion} on ddx "PT00:00:15")
+  # TODO: change time to lightlevel when sun shines into room
+  deconz_rule "${room} Curtains Hot, Daylight" "[
+    $(deconz_condition_temperature ${temperature} gt 2300),
+    $(deconz_condition_daylight ${daylight}),
+    $(deconz_condition_localtime "13:00:00" "23:00:00")
   ]" "[
-    $(ph_action_sensor_config ${motion} '{"on": true}')
+    $(deconz_action_sensor_config ${motion} '{"on": false}'),
+    $(deconz_action_blind_open ${curtains} false)
+  ]"
+
+  deconz_rule "${room} Curtains Reset Motion" "[
+    $(deconz_condition_sensor_config ${motion} on eq false),
+    $(deconz_condition_sensor_config ${motion} on ddx "PT00:00:15")
+  ]" "[
+    $(deconz_action_sensor_config ${motion} '{"on": true}')
   ]"
 }
 
 # ===== Thermostat =============================================================
 
-# Usage: ph_rules_thermo_display room thermostat
-function ph_rules_thermo_display() {
+# Usage: deconz_rules_thermo_display room thermostat
+function deconz_rules_thermo_display() {
   local room="${1}"
   local -i thermostat=${2}
 
-  ph_rule "${room} Thermostat Display" "[
-    $(ph_condition_sensor_config ${thermostat} displayflipped false)
+  deconz_rule "${room} Thermostat Display" "[
+    $(deconz_condition_sensor_config ${thermostat} displayflipped false)
   ]" "[
-    $(ph_action_sensor_config ${thermostat} '{"displayflipped": true}')
+    $(deconz_action_sensor_config ${thermostat} '{"displayflipped": true}')
   ]"
 }
 
-# Usage: ph_rules_thermo_home room thermostat flag [high [low]]
-function ph_rules_thermo_home() {
+# Usage: deconz_rules_thermo_home room thermostat flag [high [low]]
+function deconz_rules_thermo_home() {
   local room="${1}"
   local -i thermostat=${2}
   local -i flag=${3}
   local -i high=${4:-2100}
   local -i low=${5:-1500}
 
-  ph_rule "${room} Away" "[
-    $(ph_condition_flag ${flag} false),
-    $(ph_condition_ddx ${flag} "00:05:00")
+  deconz_rule "${room} Away" "[
+    $(deconz_condition_flag ${flag} false),
+    $(deconz_condition_ddx ${flag} "00:05:00")
   ]" "[
-    $(ph_action_heatsetpoint ${thermostat} ${low})
+    $(deconz_action_heatsetpoint ${thermostat} ${low})
   ]"
 
-  ph_rule "${room} Home" "[
-    $(ph_condition_flag ${flag}),
-    $(ph_condition_ddx ${flag} "00:05:00")
+  deconz_rule "${room} Home" "[
+    $(deconz_condition_flag ${flag}),
+    $(deconz_condition_ddx ${flag} "00:05:00")
   ]" "[
-    $(ph_action_heatsetpoint ${thermostat} ${high})
+    $(deconz_action_heatsetpoint ${thermostat} ${high})
   ]"
 }
 
-# Usage: ph_rules_thermo_day room thermostat flag status [high [low]]
-function ph_rules_thermo_day() {
+# Usage: deconz_rules_thermo_day room thermostat flag status [high [low]]
+function deconz_rules_thermo_day() {
   local room="${1}"
   local -i thermostat=${2}
   local -i night=${3}
@@ -1160,49 +1156,49 @@ function ph_rules_thermo_day() {
   local -i high=${5:-2100}
   local -i low=${6:-1500}
 
-  ph_rule "${room} Night On" "[
-    $(ph_condition_flag ${night}),
-    $(ph_condition_ddx ${night} "00:05:00")
+  deconz_rule "${room} Night On" "[
+    $(deconz_condition_flag ${night}),
+    $(deconz_condition_ddx ${night} "00:05:00")
   ]" "[
-    $(ph_action_heatsetpoint ${thermostat} ${low})
+    $(deconz_action_heatsetpoint ${thermostat} ${low})
   ]"
 
-  ph_rule "${room} Wakeup 3/3" "[
-    $(ph_condition_status ${status} -2),
-    $(ph_condition_ddx ${status} status "00:10:00")
+  deconz_rule "${room} Wakeup 3/3" "[
+    $(deconz_condition_status ${status} -2),
+    $(deconz_condition_ddx ${status} status "00:10:00")
   ]" "[
-    $(ph_action_heatsetpoint ${thermostat} ${high})
+    $(deconz_action_heatsetpoint ${thermostat} ${high})
   ]"
 }
 
-# Usage: ph_rules_thermo_night room thermostat [high [low]]
-function ph_rules_thermo_night() {
+# Usage: deconz_rules_thermo_night room thermostat [high [low]]
+function deconz_rules_thermo_night() {
   local room="${1}"
   local -i thermostat=${2}
   local -i high=${3:-2100}
   local -i low=${4:-1500}
 
-  ph_rule "${room} Night On, Week" "[
-    $(ph_condition_config localtime in "W120/T21:00:00/T08:00:00")
+  deconz_rule "${room} Night On, Week" "[
+    $(deconz_condition_config localtime in "W120/T21:00:00/T08:00:00")
   ]" "[
-    $(ph_action_heatsetpoint ${thermostat} ${high})
+    $(deconz_action_heatsetpoint ${thermostat} ${high})
   ]"
 
-  ph_rule "${room} Night Off, Week" "[
-    $(ph_condition_config localtime in "W120/T08:00:00/T21:00:00")
+  deconz_rule "${room} Night Off, Week" "[
+    $(deconz_condition_config localtime in "W120/T08:00:00/T21:00:00")
   ]" "[
-    $(ph_action_heatsetpoint ${thermostat} ${low})
+    $(deconz_action_heatsetpoint ${thermostat} ${low})
   ]"
 
-  ph_rule "${room} Night On, Weekend" "[
-    $(ph_condition_config localtime in "W7/T21:00:00/T09:00:00")
+  deconz_rule "${room} Night On, Weekend" "[
+    $(deconz_condition_config localtime in "W7/T21:00:00/T09:00:00")
   ]" "[
-    $(ph_action_heatsetpoint ${thermostat} ${high})
+    $(deconz_action_heatsetpoint ${thermostat} ${high})
   ]"
 
-  ph_rule "${room} Night Off, Weekend" "[
-    $(ph_condition_config localtime in "W7/T09:00:00/T21:00:00")
+  deconz_rule "${room} Night Off, Weekend" "[
+    $(deconz_condition_config localtime in "W7/T09:00:00/T21:00:00")
   ]" "[
-    $(ph_action_heatsetpoint ${thermostat} ${low})
+    $(deconz_action_heatsetpoint ${thermostat} ${low})
   ]"
 }
