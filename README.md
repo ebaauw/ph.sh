@@ -1,6 +1,6 @@
 # ph.sh
 
-## Shell commands for Philips Hue and deCONZ
+## Shell commands for deCONZ
 Copyright © 2017-2022 Erik Baauw. All rights reserved.
 
 ### Notice
@@ -11,6 +11,6 @@ This repository now only contains some shell scripts, that aren't yet, or won't 
 
 Script | Description
 ------ | -----------
-`ph_sensors.sh` | Defines shell functions for creating and maintaining CLIP sensors.
-`ph_rules.sh` | Defines shell functions for creating and maintaining rules.
-`ph_keepalive.command` | Update the room status when macOS user has been active recently.
+`deconz_sensors.sh` | Defines shell functions for creating and maintaining CLIP sensors.
+`deconz_rules.sh` | Defines shell functions for creating and maintaining rules.
+`deconz_keepalive.command` | Update the room status when macOS user has been active recently.
