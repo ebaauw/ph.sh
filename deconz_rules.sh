@@ -818,6 +818,43 @@ function deconz_rules_switch_foh() {
   ]"
 }
 
+# Usage: deconz_rules_foh_blind room switch blind [left|right|both]
+function deconz_rules_foh_blind() {
+  local room="${1}"
+  local -i switch=${2}
+  local -i blind=${3}
+  case "${4}" in
+    "left")  up=1; down=2; name=" Left" ;;
+    "right") up=3; down=4; name=" Right" ;;
+    "both")  up=5; down=6; name=" Both" ;;
+    "")      up=1; down=2; name="" ;;
+  esac
+
+  deconz_rule "${room} Switch Up${name} Press" "[
+    $(deconz_condition_buttonevent ${switch} ${up}000 ${up}003)
+  ]" "[
+    $(deconz_action_blind_open ${blind} true)
+  ]"
+
+  deconz_rule "${room} Switch Up${name} Release" "[
+    $(deconz_condition_buttonevent ${switch} ${up}003)
+  ]" "[
+    $(deconz_action_blind_stop ${blind})
+  ]"
+
+  deconz_rule "${room} Switch Down${name} Press" "[
+    $(deconz_condition_buttonevent ${switch} ${down}000 ${down}003)
+  ]" "[
+    $(deconz_action_blind_open ${blind} false)
+  ]"
+
+  deconz_rule "${room} Switch Down${name} Release" "[
+    $(deconz_condition_buttonevent ${switch} ${down}003)
+  ]" "[
+    $(deconz_action_blind_stop ${blind} stop)
+  ]"
+}
+
 # Usage: deconz_rules_dimmer_updown room dimmer group
 function deconz_rules_dimmer_updown() {
   local room="${1}"
