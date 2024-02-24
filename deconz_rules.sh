@@ -274,9 +274,9 @@ function deconz_action_light_bri() {
 }
 
 # Usage: condition="$(deconz_action_blind_open blind [value])"
-function deconz_action_blind_open() {
-  deconz_action_light_state  "${1}" "{\"open\": ${2:-true}}"
-}
+# function deconz_action_blind_open() {
+#   deconz_action_light_state  "${1}" "{\"open\": ${2:-true}}"
+# }
 
 # Usage: condition="$(deconz_action_blind_lift blind [value])"
 function deconz_action_blind_lift() {
@@ -833,7 +833,7 @@ function deconz_rules_foh_blind() {
   deconz_rule "${room} Switch Up${name} Press" "[
     $(deconz_condition_buttonevent ${switch} ${up}000 ${up}003)
   ]" "[
-    $(deconz_action_blind_open ${blind} true)
+    $(deconz_action_blind_lift ${blind} 0)
   ]"
 
   deconz_rule "${room} Switch Up${name} Release" "[
@@ -845,7 +845,7 @@ function deconz_rules_foh_blind() {
   deconz_rule "${room} Switch Down${name} Press" "[
     $(deconz_condition_buttonevent ${switch} ${down}000 ${down}003)
   ]" "[
-    $(deconz_action_blind_open ${blind} false)
+    $(deconz_action_blind_lift ${blind} 100)
   ]"
 
   deconz_rule "${room} Switch Down${name} Release" "[
@@ -1107,7 +1107,7 @@ function deconz_rules_curtains() {
     $(deconz_condition_daylight ${daylight} false)
   ]" "[
     $(deconz_action_sensor_config ${motion} '{"on": false}'),
-    $(deconz_action_blind_open ${curtains} false)
+    $(deconz_action_blind_lift ${curtains} 100)
   ]"
 
   deconz_rule "${room} Curtains Sunrise" "[
@@ -1116,7 +1116,7 @@ function deconz_rules_curtains() {
     $(deconz_condition_localtime "23:00:00" "13:00:00")
   ]" "[
     $(deconz_action_sensor_config ${motion} '{"on": false}'),
-    $(deconz_action_blind_open ${curtains})
+    $(deconz_action_blind_lift ${curtains} 0)
   ]"
 
   # TODO: change time to lightlevel when sun shines into room
@@ -1126,7 +1126,7 @@ function deconz_rules_curtains() {
     $(deconz_condition_localtime "13:00:00" "23:00:00")
   ]" "[
     $(deconz_action_sensor_config ${motion} '{"on": false}'),
-    $(deconz_action_blind_open ${curtains})
+    $(deconz_action_blind_lift ${curtains} 0)
   ]"
 
   # TODO: change time to lightlevel when sun shines into room
@@ -1136,7 +1136,7 @@ function deconz_rules_curtains() {
     $(deconz_condition_localtime "13:00:00" "23:00:00")
   ]" "[
     $(deconz_action_sensor_config ${motion} '{"on": false}'),
-    $(deconz_action_blind_open ${curtains} false)
+    $(deconz_action_blind_lift ${curtains} 100)
   ]"
 
   deconz_rule "${room} Curtains Reset Motion" "[
