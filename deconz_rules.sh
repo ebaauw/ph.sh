@@ -745,6 +745,49 @@ function deconz_rules_dimmer_onoff() {
   ]"
 }
 
+# Usage: deconz_rules_dimmer2_onoff room status flag dimmer group scene offGroup
+function deconz_rules_dimmer2_onoff() {
+  local room="${1}"
+  local -i status=${2}
+  local -i flag=${3}
+  local -i dimmer=${4}
+  local -i group=${5}
+  local -i scene=${6}
+  local -i offGroup=${7:-${5}}
+
+  deconz_rule "${room} Dimmer Off Press" "[
+    $(deconz_condition_sensor ${dimmer} buttonevent 1002),
+    $(deconz_condition_ddx ${dimmer} buttonevent "00:00:01"),
+    $(deconz_condition_allon ${group} false)
+  ]" "[
+    $(deconz_action_status ${status} 0)
+  ]"
+
+  deconz_rule "${room} Dimmer On Press" "[
+    $(deconz_condition_sensor ${dimmer} buttonevent 1002),
+    $(deconz_condition_ddx ${dimmer} buttonevent "00:00:01"),
+    $(deconz_condition_allon ${group})
+  ]" "[
+    $(deconz_action_status ${status} 1)
+  ]"
+
+  # Set extended room off.
+  deconz_rule "${room} Dimmer Off Hold" "[
+    $(deconz_condition_buttonevent ${dimmer} 1001),
+    $(deconz_condition_status ${status} lt 1)
+  ]" "[
+    $(deconz_action_group_action "${offGroup}" "{\"on\": false}")
+  ]"
+
+  # Set default scene.
+  deconz_rule "${room} Dimmer On Hold" "[
+    $(deconz_condition_buttonevent ${dimmer} 1001),
+    $(deconz_condition_status ${status} gt 0)
+  ]" "[
+    $(deconz_action_scene_recall ${group} ${scene})
+  ]"
+}
+
 # Usage: deconz_rules_switch_toggle room status flag switch
 function deconz_rules_switch_toggle() {
   local room="${1}"
@@ -926,72 +969,46 @@ function deconz_rules_light() {
 
   local type=$(deconz_unquote $(deconz get "/sensors/${lightlevel}/type"))
   if [ "${type}" == "Daylight" ] ; then
-    if [ "${_deconz_model}" == "deCONZ" ] ; then
-      # lightlevel is Daylight sensor on deCONZ gateway
-      deconz_rule "${room} On, Not Dark" "[
-        $(deconz_condition_flag ${flag}),
-        $(deconz_condition_status ${lightlevel} gt 125),
-        $(deconz_condition_status ${lightlevel} lt 205)
-      ]" "[
-        $(deconz_action_group_on ${group} false)
-      ]"
+    # lightlevel is Daylight sensor on deCONZ gateway
+    deconz_rule "${room} On, Not Dark" "[
+      $(deconz_condition_flag ${flag}),
+      $(deconz_condition_status ${lightlevel} gt 125),
+      $(deconz_condition_status ${lightlevel} lt 205)
+    ]" "[
+      $(deconz_action_group_on ${group} false)
+    ]"
 
-      deconz_rule "${room} On, Dark 1, Day" "[
-        $(deconz_condition_flag ${flag}),
-        $(deconz_condition_status ${lightlevel} lt 125),
-        $(deconz_condition_flag ${night} false)
-      ]" "[
-        $(deconz_action_scene_recall ${group} ${default})
-      ]"
+    deconz_rule "${room} On, Dark 1, Day" "[
+      $(deconz_condition_flag ${flag}),
+      $(deconz_condition_status ${lightlevel} lt 125),
+      $(deconz_condition_flag ${night} false)
+    ]" "[
+      $(deconz_action_scene_recall ${group} ${default})
+    ]"
 
-      deconz_rule "${room} On, Dark 2, Day" "[
-        $(deconz_condition_flag ${flag}),
-        $(deconz_condition_status ${lightlevel} gt 205),
-        $(deconz_condition_flag ${night} false)
-      ]" "[
-        $(deconz_action_scene_recall ${group} ${default})
-      ]"
+    deconz_rule "${room} On, Dark 2, Day" "[
+      $(deconz_condition_flag ${flag}),
+      $(deconz_condition_status ${lightlevel} gt 205),
+      $(deconz_condition_flag ${night} false)
+    ]" "[
+      $(deconz_action_scene_recall ${group} ${default})
+    ]"
 
-      deconz_rule "${room} On, Dark 1, Night" "[
-        $(deconz_condition_flag ${flag}),
-        $(deconz_condition_status ${lightlevel} lt 125),
-        $(deconz_condition_flag ${night})
-      ]" "[
-        $(deconz_action_scene_recall ${group} ${nightmode})
-      ]"
+    deconz_rule "${room} On, Dark 1, Night" "[
+      $(deconz_condition_flag ${flag}),
+      $(deconz_condition_status ${lightlevel} lt 125),
+      $(deconz_condition_flag ${night})
+    ]" "[
+      $(deconz_action_scene_recall ${group} ${nightmode})
+    ]"
 
-      deconz_rule "${room} On, Dark 2, Night" "[
-        $(deconz_condition_flag ${flag}),
-        $(deconz_condition_status ${lightlevel} gt 205),
-        $(deconz_condition_flag ${night})
-      ]" "[
-        $(deconz_action_scene_recall ${group} ${nightmode})
-      ]"
-    else
-      # lightlevel is Daylight sensor on Hue bridge
-      deconz_rule "${room} On, Daylight" "[
-        $(deconz_condition_flag ${flag}),
-        $(deconz_condition_daylight ${lightlevel})
-      ]" "[
-        $(deconz_action_group_on ${group} false)
-      ]"
-
-      deconz_rule "${room} On, Not Daylight, Day" "[
-        $(deconz_condition_flag ${flag}),
-        $(deconz_condition_daylight ${lightlevel} false),
-        $(deconz_condition_flag ${night} false)
-      ]" "[
-        $(deconz_action_scene_recall ${group} ${default})
-      ]"
-
-      deconz_rule "${room} On, Not Daylight, Night" "[
-        $(deconz_condition_flag ${flag}),
-        $(deconz_condition_daylight ${lightlevel} false),
-        $(deconz_condition_flag ${night})
-      ]" "[
-        $(deconz_action_scene_recall ${group} ${nightmode})
-      ]"
-    fi
+    deconz_rule "${room} On, Dark 2, Night" "[
+      $(deconz_condition_flag ${flag}),
+      $(deconz_condition_status ${lightlevel} gt 205),
+      $(deconz_condition_flag ${night})
+    ]" "[
+      $(deconz_action_scene_recall ${group} ${nightmode})
+    ]"
   else
     # lightlevel is a ZHALightLevel sensor
     deconz_rule "${room} On, Daylight" "[
