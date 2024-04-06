@@ -950,12 +950,30 @@ function deconz_rules_light() {
   ]"
 
   if [ -z "${7}" ] ; then
-    deconz_rule "${room} On, Day" "[
-      $(deconz_condition_flag ${flag}),
-      $(deconz_condition_flag ${night} false)
-    ]" "[
-      $(deconz_action_scene_recall ${group} ${default})
-    ]"
+    if [ -z "${8}" ] ; then
+      deconz_rule "${room} On, Day" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_flag ${night} false)
+      ]" "[
+        $(deconz_action_scene_recall ${group} ${default})
+      ]"
+    else
+      deconz_rule "${room} On, TV Off, Day" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_status ${status} lt 4),
+        $(deconz_condition_flag ${night} false)
+      ]" "[
+        $(deconz_action_scene_recall ${group} ${default})
+      ]"
+
+      deconz_rule "${room} On, TV On, Day" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_status ${status} 4),
+        $(deconz_condition_flag ${night} false)
+      ]" "[
+        $(deconz_action_scene_recall ${group} ${tv})
+      ]"
+    fi
 
     deconz_rule "${room} On, Night" "[
       $(deconz_condition_flag ${flag}),
