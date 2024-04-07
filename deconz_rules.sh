@@ -801,15 +801,15 @@ function deconz_rules_dimmer2_hue() {
 
   deconz_rule "${room} Dimmer Hue Press Off" "[
     $(deconz_condition_buttonevent ${dimmer} 4002),
-    $(deconz_condition_status ${status} lt 1)
+    $(deconz_condition_status ${status} gt 0)
   ]" "[
     $(deconz_action_status ${status} 0)
   ]"
 
   deconz_rule "${room} Dimmer Hue Press On" "[
     $(deconz_condition_buttonevent ${dimmer} 4002),
-    $(deconz_condition_status ${status} gt 0)
-  ]" "[
+    $(deconz_condition_status ${status} lt 1)
+    ]" "[
     $(deconz_action_status ${status} 1)
   ]"
 
