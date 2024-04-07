@@ -745,7 +745,7 @@ function deconz_rules_dimmer_onoff() {
   ]"
 }
 
-# Usage: deconz_rules_dimmer2_onoff room status flag dimmer group scene offGroup
+# Usage: deconz_rules_dimmer2_onoff room status flag dimmer group scene
 function deconz_rules_dimmer2_onoff() {
   local room="${1}"
   local -i status=${2}
@@ -755,7 +755,8 @@ function deconz_rules_dimmer2_onoff() {
   local -i scene=${6}
   local -i offGroup=${7:-${5}}
 
-  deconz_rule "${room} Dimmer Off Press" "[
+  # Set room off after dimmer sends _Off_
+  deconz_rule "${room} Dimmer OnOff Press Off" "[
     $(deconz_condition_sensor ${dimmer} buttonevent 1002),
     $(deconz_condition_ddx ${dimmer} buttonevent "00:00:01"),
     $(deconz_condition_allon ${group} false)
@@ -763,7 +764,8 @@ function deconz_rules_dimmer2_onoff() {
     $(deconz_action_status ${status} 0)
   ]"
 
-  deconz_rule "${room} Dimmer On Press" "[
+  # Set room on after dimmer sends _On_
+  deconz_rule "${room} Dimmer OnOff Press On" "[
     $(deconz_condition_sensor ${dimmer} buttonevent 1002),
     $(deconz_condition_ddx ${dimmer} buttonevent "00:00:01"),
     $(deconz_condition_allon ${group})
@@ -771,17 +773,57 @@ function deconz_rules_dimmer2_onoff() {
     $(deconz_action_status ${status} 1)
   ]"
 
-  # Set extended room off.
-  deconz_rule "${room} Dimmer Off Hold" "[
+  # Set group off off.
+  deconz_rule "${room} Dimmer OnOff Hold Off" "[
     $(deconz_condition_buttonevent ${dimmer} 1001),
     $(deconz_condition_status ${status} lt 1)
   ]" "[
-    $(deconz_action_group_action "${offGroup}" "{\"on\": false}")
+    $(deconz_action_group_action "${group}" "{\"on\": false}")
   ]"
 
   # Set default scene.
-  deconz_rule "${room} Dimmer On Hold" "[
+  deconz_rule "${room} Dimmer OnOff Hold On" "[
     $(deconz_condition_buttonevent ${dimmer} 1001),
+    $(deconz_condition_status ${status} gt 0)
+  ]" "[
+    $(deconz_action_scene_recall ${group} ${scene})
+  ]"
+}
+
+# Usage: deconz_rules_dimmer2_hue room status flag dimmer group scene
+function deconz_rules_dimmer2_hue() {
+  local room="${1}"
+  local -i status=${2}
+  local -i flag=${3}
+  local -i dimmer=${4}
+  local -i group=${5}
+  local -i scene=${6}
+
+  deconz_rule "${room} Dimmer Hue Press Off" "[
+    $(deconz_condition_buttonevent ${dimmer} 4002),
+    $(deconz_condition_status ${status} lt 1)
+  ]" "[
+    $(deconz_action_status ${status} 0)
+  ]"
+
+  deconz_rule "${room} Dimmer Hue Press On" "[
+    $(deconz_condition_buttonevent ${dimmer} 4002),
+    $(deconz_condition_status ${status} gt 0)
+  ]" "[
+    $(deconz_action_status ${status} 1)
+  ]"
+
+  # Set extended room off.
+  deconz_rule "${room} Dimmer Hue Hold Off" "[
+    $(deconz_condition_buttonevent ${dimmer} 4001),
+    $(deconz_condition_status ${status} lt 1)
+  ]" "[
+    $(deconz_action_group_action "${group}" "{\"on\": false}")
+  ]"
+
+  # Set default scene.
+  deconz_rule "${room} Dimmer Hue Hold On" "[
+    $(deconz_condition_buttonevent ${dimmer} 4001),
     $(deconz_condition_status ${status} gt 0)
   ]" "[
     $(deconz_action_scene_recall ${group} ${scene})
@@ -931,7 +973,7 @@ function deconz_rules_dimmer_updown() {
 
 # ===== Lights =================================================================
 
-# Usage: deconz_rules_light room flag group night default nightmode [lightlevel [status tv]]
+# Usage: deconz_rules_light room flag group night default nightmode [lightlevel [tv tvscene]]
 function deconz_rules_light() {
   local room="${1}"
   local -i flag=${2}
@@ -940,8 +982,8 @@ function deconz_rules_light() {
   local default="${5}"
   local nightmode="${6}"
   local -i lightlevel=${7}
-  local -i status=${8}
-  local tv="${9}"
+  local -i tv=${8}
+  local tvscene="${9}"
 
   deconz_rule "${room} Off" "[
     $(deconz_condition_flag ${flag} false)
@@ -960,7 +1002,7 @@ function deconz_rules_light() {
     else
       deconz_rule "${room} On, TV Off, Day" "[
         $(deconz_condition_flag ${flag}),
-        $(deconz_condition_status ${status} lt 4),
+        $(deconz_condition_flag ${tv} false),
         $(deconz_condition_flag ${night} false)
       ]" "[
         $(deconz_action_scene_recall ${group} ${default})
@@ -968,10 +1010,10 @@ function deconz_rules_light() {
 
       deconz_rule "${room} On, TV On, Day" "[
         $(deconz_condition_flag ${flag}),
-        $(deconz_condition_status ${status} 4),
+        $(deconz_condition_flag ${tv}),
         $(deconz_condition_flag ${night} false)
       ]" "[
-        $(deconz_action_scene_recall ${group} ${tv})
+        $(deconz_action_scene_recall ${group} ${tvscene})
       ]"
     fi
 
@@ -1047,7 +1089,7 @@ function deconz_rules_light() {
     else
       deconz_rule "${room} On, TV Off, Dark, Day" "[
         $(deconz_condition_flag ${flag}),
-        $(deconz_condition_status ${status} lt 4),
+        $(deconz_condition_flag ${tv} false),
         $(deconz_condition_dark ${lightlevel}),
         $(deconz_condition_flag ${night} false)
       ]" "[
@@ -1056,21 +1098,21 @@ function deconz_rules_light() {
 
       deconz_rule "${room} On, TV On, Dark, Day" "[
         $(deconz_condition_flag ${flag}),
-        $(deconz_condition_status ${status} 4),
+        $(deconz_condition_flag ${tv}),
         $(deconz_condition_dark ${lightlevel}),
         $(deconz_condition_flag ${night} false)
       ]" "[
-        $(deconz_action_scene_recall ${group} ${tv})
+        $(deconz_action_scene_recall ${group} ${tvscene})
       ]"
 
       deconz_rule "${room} On, TV On, Not Daylight, Day" "[
         $(deconz_condition_flag ${flag}),
-        $(deconz_condition_status ${status} 4),
-        $(deconz_condition_dx ${status} status),
+        $(deconz_condition_flag ${tv}),
+        $(deconz_condition_dx ${tv} flag),
         $(deconz_condition_daylight ${lightlevel} false),
         $(deconz_condition_flag ${night} false)
       ]" "[
-        $(deconz_action_scene_recall ${group} ${tv})
+        $(deconz_action_scene_recall ${group} ${tvscene})
       ]"
     fi
 
