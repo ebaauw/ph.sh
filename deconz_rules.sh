@@ -486,13 +486,15 @@ function deconz_rules_status() {
   ]"
 
   deconz_rule "${room} Status <1" "[
-    $(deconz_condition_status ${status} lt 1)
+    $(deconz_condition_status ${status} lt 1),
+    $(deconz_condition_dx ${status})
   ]" "[
     $(deconz_action_flag ${flag} false)
   ]"
 
   deconz_rule "${room} Status >0" "[
-    $(deconz_condition_status ${status} gt 0)
+    $(deconz_condition_status ${status} gt 0),
+    $(deconz_condition_dx ${status})
   ]" "[
     $(deconz_action_flag ${flag})
   ]"
@@ -999,6 +1001,13 @@ function deconz_rules_light() {
       ]" "[
         $(deconz_action_scene_recall ${group} ${default})
       ]"
+
+      deconz_rule "${room} On, Night" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_flag ${night})
+      ]" "[
+        $(deconz_action_scene_recall ${group} ${nightmode})
+      ]"
     else
       deconz_rule "${room} On, TV Off, Day" "[
         $(deconz_condition_flag ${flag}),
@@ -1015,14 +1024,23 @@ function deconz_rules_light() {
       ]" "[
         $(deconz_action_scene_recall ${group} ${tvscene})
       ]"
-    fi
 
-    deconz_rule "${room} On, Night" "[
-      $(deconz_condition_flag ${flag}),
-      $(deconz_condition_flag ${night})
-    ]" "[
-      $(deconz_action_scene_recall ${group} ${nightmode})
-    ]"
+      deconz_rule "${room} On, TV Off, Night" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_flag ${tv} false),
+        $(deconz_condition_flag ${night})
+      ]" "[
+        $(deconz_action_scene_recall ${group} ${nightmode})
+      ]"
+
+      deconz_rule "${room} On, TV On, Night" "[
+        $(deconz_condition_flag ${flag}),
+        $(deconz_condition_flag ${tv}),
+        $(deconz_condition_flag ${night})
+      ]" "[
+        $(deconz_action_scene_recall ${group} ${tvscene})
+      ]"
+    fi
 
     return
   fi
