@@ -57,7 +57,7 @@ function deconz_sensor_clip_flag() {
 # allowed values for the status are.
 # Usage: id=$(deconz_sensor_clip_status id name [aid] [min max]])
 function deconz_sensor_clip_status() {
-  _deconz_sensor_clip "${1}" "${2}" CLIPGenericStatus "${3:-${1}}-01-0012" "${4:-0},${5:-2}"
+  _deconz_sensor_clip "${1}" "${2}" CLIPGenericStatus "S${3:-${1}}-01-0012" "${4:-0},${5:-2}"
 }
 
 # Create CLIPPresence sensor.
