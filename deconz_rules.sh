@@ -854,6 +854,32 @@ function deconz_rules_switch_toggle() {
   ]"
 }
 
+# Usage: deconz_rules_wall_module room status switch [left|right]
+function deconz_rules_wall_module() {
+  local room="${1}"
+  local -i status=${2}
+  local -i switch=${3}
+  case "${4}" in
+    "left")  button=1; name=" Left" ;;
+    "right") button=2; name=" Right" ;;
+    "")      button=1; down=2; name="" ;;
+  esac
+
+  deconz_rule "${room} Switch${name} Press (1/2)" "[
+    $(deconz_condition_buttonevent ${switch} ${button}002),
+    $(deconz_condition_status ${status} gt 0)
+  ]" "[
+    $(deconz_action_status ${status} 0)
+  ]"
+
+  deconz_rule "${room} Switch${name} Press (2/2)" "[
+    $(deconz_condition_buttonevent ${switch} ${button}002),
+    $(deconz_condition_status ${status} lt 1)
+  ]" "[
+    $(deconz_action_status ${status} 1)
+  ]"
+}
+
 # Usage: deconz_rules_switch_foh room status switch group [left|right|both]
 function deconz_rules_switch_foh() {
   local room="${1}"
