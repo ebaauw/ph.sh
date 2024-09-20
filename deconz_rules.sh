@@ -832,18 +832,19 @@ function deconz_rules_dimmer2_hue() {
   ]"
 }
 
-# Usage: deconz_rules_switch_toggle room status flag switch
+# Usage: deconz_rules_switch_toggle room status flag switch off
 function deconz_rules_switch_toggle() {
   local room="${1}"
   local -i status=${2}
   local -i flag=${3}
   local -i switch=${4}
+  local -i off=${5:-0}
 
   deconz_rule "${room} Switch On/Off Press (1/2)" "[
     $(deconz_condition_buttonevent ${switch} 1002),
     $(deconz_condition_status ${status} gt 0)
   ]" "[
-    $(deconz_action_status ${status} 0)
+    $(deconz_action_status ${status} ${off})
   ]"
 
   deconz_rule "${room} Switch On/Off Press (2/2)" "[
