@@ -117,14 +117,15 @@ function deconz_sensor_name() {
 
 # Set Hue Motion presence sensor name, sensitivity, and resourcelink.
 # Hue app v2 expects a resourcelink before it shows Hue Motion status.
-# Usage: deconz_sensor_presence id name [sensitivity]
+# Usage: deconz_sensor_presence id name [sensitivity] [delay]
 function deconz_sensor_presence() {
   local -i id
 
   deconz_sensor_name "${1}" "${2}"
   [ $? -ne 0 ] && return 1
   deconz put "/sensors/${1}/config" "{
-    \"sensitivity\": ${3:-4}
+    \"sensitivity\": ${3:-4},
+    \"delay\": ${4:-0}
   }"
 }
 
