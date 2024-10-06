@@ -486,6 +486,14 @@ function deconz_rules_status() {
     $(deconz_action_status ${status} 0)
   ]"
 
+  # deconz_rule "${room} On" "[
+  #   $(deconz_condition_flag ${flag}),
+  #   $(deconz_condition_dx ${flag}),
+  #   $(deconz_condition_status ${status} eq 0)
+  # ]" "[
+  #   $(deconz_action_status ${status} )
+  # ]"
+
   deconz_rule "${room} Status <1" "[
     $(deconz_condition_status ${status} lt 1),
     $(deconz_condition_dx ${status})
