@@ -464,6 +464,7 @@ function deconz_rules_power() {
 #     1    presence                    on    on
 #     2    presence in adjacent room   on    on
 #     3    pending no presence         on    on
+#     4    tv on                       on    off
 #
 # The status is maintained from motion sensors, door sensors, and switches.
 # The flag is maintained automatically, from the status, or manually from
@@ -832,13 +833,12 @@ function deconz_rules_dimmer2_hue() {
   ]"
 }
 
-# Usage: deconz_rules_switch_toggle room status flag switch off
+# Usage: deconz_rules_switch_toggle room status switch off
 function deconz_rules_switch_toggle() {
   local room="${1}"
   local -i status=${2}
-  local -i flag=${3}
-  local -i switch=${4}
-  local -i off=${5:-0}
+  local -i switch=${3}
+  local -i off=${4:-0}
 
   deconz_rule "${room} Switch On/Off Press (1/2)" "[
     $(deconz_condition_buttonevent ${switch} 1002),
@@ -855,7 +855,7 @@ function deconz_rules_switch_toggle() {
   ]"
 }
 
-# Usage: deconz_rules_wall_module room status switch [left|right]
+# Usage: deconz_rules_wall_module room status switch [left|right] [off]
 function deconz_rules_wall_module() {
   local room="${1}"
   local -i status=${2}
@@ -863,14 +863,15 @@ function deconz_rules_wall_module() {
   case "${4}" in
     "left")  button=1; name=" Left" ;;
     "right") button=2; name=" Right" ;;
-    "")      button=1; down=2; name="" ;;
+    "")      button=1; name=" Button " ;;
   esac
+  local -i off=${5:-0}
 
   deconz_rule "${room} Switch${name} Press (1/2)" "[
     $(deconz_condition_buttonevent ${switch} ${button}002),
     $(deconz_condition_status ${status} gt 0)
   ]" "[
-    $(deconz_action_status ${status} 0)
+    $(deconz_action_status ${status} ${off})
   ]"
 
   deconz_rule "${room} Switch${name} Press (2/2)" "[
@@ -881,7 +882,7 @@ function deconz_rules_wall_module() {
   ]"
 }
 
-# Usage: deconz_rules_switch_foh room status switch group [left|right|both]
+# Usage: deconz_rules_switch_foh room status switch group [left|right|both] [off]
 function deconz_rules_switch_foh() {
   local room="${1}"
   local -i status=${2}
@@ -893,6 +894,7 @@ function deconz_rules_switch_foh() {
     "both")  up=5; down=6; name=" Both" ;;
     "")      up=1; down=2; name="" ;;
   esac
+  local -i off=${6:-0}
 
   deconz_rule "${room} Switch Up${name} Press" "[
     $(deconz_condition_buttonevent ${switch} ${up}002)
@@ -916,7 +918,7 @@ function deconz_rules_switch_foh() {
   deconz_rule "${room} Switch Down${name} Press" "[
     $(deconz_condition_buttonevent ${switch} ${down}002)
   ]" "[
-    $(deconz_action_status ${status} 0)
+    $(deconz_action_status ${status} ${off})
   ]"
 
   deconz_rule "${room} Switch Down${name} Hold" "[
