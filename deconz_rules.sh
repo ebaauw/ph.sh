@@ -471,7 +471,7 @@ function deconz_rules_power() {
 # HomeKit where the flag is exposed as switch.  The lights are controlled from
 # the flag (in combination with the time of day and lightlevel).
 
-# Usage: deconz_rules room status flag [group]
+# Usage: deconz_rules_status room status flag [group]
 function deconz_rules_status() {
   local room="${1}"
   local -i status=${2}
@@ -485,14 +485,6 @@ function deconz_rules_status() {
   ]" "[
     $(deconz_action_status ${status} 0)
   ]"
-
-  # deconz_rule "${room} On" "[
-  #   $(deconz_condition_flag ${flag}),
-  #   $(deconz_condition_dx ${flag}),
-  #   $(deconz_condition_status ${status} eq 0)
-  # ]" "[
-  #   $(deconz_action_status ${status} )
-  # ]"
 
   deconz_rule "${room} Status <1" "[
     $(deconz_condition_status ${status} lt 1),
@@ -539,6 +531,70 @@ function deconz_rules_status() {
       $(deconz_action_status ${status} 0)
     ]"
   fi
+}
+
+# For each room, we keep a CLIPGenericFlag sensor (flag), as virtual master
+# switch, and a CLIPGenericStatus sensor (status), to store the room state:
+#
+# status   state                       room  automation timeout
+# ======   =========================   ====  ========== =======
+#    -2    wakeup in progress          off   off        yes
+#    -1    disabled                    off   off        no
+#     0    no presence                 off   on         no
+#     1    no presence                 on    on         yes
+#     2    presence                    on    on         no
+#     3    not used                    on    on         no
+#     4    tv on                       on    off        no
+#
+# The status is maintained from motion sensors, door sensors, and switches.
+# The flag is maintained automatically, from the status, or manually from
+# HomeKit where the flag is exposed as switch.  The lights are controlled from
+# the flag (in combination with the time of day and lightlevel).
+
+# Usage: deconz_rules_status_timeout room status flag [timeout]
+function deconz_rules_status_timeout()
+{
+  local room="${1}"
+  local -i status=${2}
+  local -i flag=${3}
+  local timeout=${4:-00:05:00}
+
+  deconz_rule "${room} Off" "[
+    $(deconz_condition_flag ${flag} false),
+    $(deconz_condition_dx ${flag}),
+    $(deconz_condition_status ${status} gt 0)
+  ]" "[
+    $(deconz_action_status ${status} 0)
+  ]"
+
+  deconz_rule "${room} On" "[
+    $(deconz_condition_flag ${flag}),
+    $(deconz_condition_dx ${flag}),
+    $(deconz_condition_status ${status} eq 0)
+  ]" "[
+    $(deconz_action_status ${status} 1)
+  ]"
+
+  deconz_rule "${room} Status <1" "[
+    $(deconz_condition_status ${status} lt 1),
+    $(deconz_condition_dx ${status})
+  ]" "[
+    $(deconz_action_flag ${flag} false)
+  ]"
+
+  deconz_rule "${room} Status >0" "[
+    $(deconz_condition_status ${status} gt 0),
+    $(deconz_condition_dx ${status})
+  ]" "[
+    $(deconz_action_flag ${flag})
+  ]"
+
+  deconz_rule "${room} Status 1" "[
+    $(deconz_condition_status ${status} eq 1),
+    $(deconz_condition_ddx ${status} ${timeout})
+  ]" "[
+    $(deconz_action_status ${status} 0)
+  ]"
 }
 
 # Usage: deconz_rules_wakeup room status flag group night scene
@@ -622,6 +678,30 @@ function deconz_rules_motion() {
     $(deconz_condition_dx ${motion} presence),
     $(deconz_condition_status ${status} gt -1),
     $(deconz_condition_status ${status} lt 4)
+  ]" "[
+    $(deconz_action_status ${status} 1)
+  ]"
+}
+
+# Usage: deconz_rules_motion_timeout room status motion
+function deconz_rules_motion_timeout() {
+  local room="${1}"
+  local -i status=${2}
+  local -i motion=${3}
+
+  deconz_rule "${room} Motion Detected" "[
+    $(deconz_condition_presence ${motion}),
+    $(deconz_condition_dx ${motion}),
+    $(deconz_condition_status ${status} gt -1),
+    $(deconz_condition_status ${status} lt 4)
+  ]" "[
+    $(deconz_action_status ${status} 2)
+  ]"
+
+  deconz_rule "${room} Motion Clear" "[
+    $(deconz_condition_presence ${motion} false),
+    $(deconz_condition_dx ${motion}),
+    $(deconz_condition_status ${status} 2)
   ]" "[
     $(deconz_action_status ${status} 1)
   ]"
