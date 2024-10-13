@@ -951,7 +951,7 @@ function deconz_rules_wall_module() {
   case "${4}" in
     "left")  button=1; name=" Left" ;;
     "right") button=2; name=" Right" ;;
-    "")      button=1; name=" Button " ;;
+    "")      button=1; name=" Button" ;;
   esac
   local -i off=${5:-0}
 
