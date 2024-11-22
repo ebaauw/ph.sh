@@ -21,6 +21,6 @@ function deconz_light_name() {
     \"name\": \"${2}\"
   }"
   [ $? -eq 0 ] || return 1
-  local type=$(deconz_unquote $(deconz get "/lights/${1}/type"))
+  local type=$(deconz get /lights/${1}/type)
   _deconz_info "/lights/${1}: ${type} \"${2}\""
 }
