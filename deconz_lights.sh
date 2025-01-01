@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # deconz_lights.sh
-# Copyright © 2024 Erik Baauw. All rights reserved.
+# Copyright © 2024-2025 Erik Baauw. All rights reserved.
 #
 # Create/configure lights on a deCONZ gateway.
 # Note: be sure to re-create rules after re-creating sensors.

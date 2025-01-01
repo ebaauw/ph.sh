@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # deconz_sensors.sh
-# Copyright © 2017-2024 Erik Baauw. All rights reserved.
+# Copyright © 2017-2025 Erik Baauw. All rights reserved.
 #
 # Create/configure sensors on a deCONZ gateway.
 # Note: be sure to re-create rules after re-creating sensors.

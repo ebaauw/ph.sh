@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # deconz_rules.sh
-# Copyright © 2017-2024 Erik Baauw. All rights reserved.
+# Copyright © 2017-2025 Erik Baauw. All rights reserved.
 #
 # Create/configure rules on a deCONZ gateway.
 #
