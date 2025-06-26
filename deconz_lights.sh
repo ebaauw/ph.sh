@@ -24,3 +24,25 @@ function deconz_light_name() {
   local type=$(deconz get /lights/${1}/type)
   _deconz_info "/lights/${1}: ${type} \"${2}\""
 }
+
+# Usage: deconz_light_name id
+function deconz_light_config() {
+  deconz put "/lights/${1}/config" '{
+    "on": {
+      "startup": false
+    },
+    "bri": {
+      "execute_if_off": true,
+      "startup": "previous"
+    },
+    "color": {
+      "ct": {
+        "startup": "previous"
+      },
+      "execute_if_off": true,
+      "xy": {
+        "startup": "previous"
+      }
+    }
+  }'
+}
