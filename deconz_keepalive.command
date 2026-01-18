@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # deconz_keepalive.command
-# Copyright © 2020-2025 Erik Baauw. All rights reserved.
+# Copyright © 2020-2026 Erik Baauw. All rights reserved.
 #
 # Update the room status when macOS user has been active recently.
 
