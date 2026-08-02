@@ -768,6 +768,27 @@ function deconz_rules_leave_room() {
   ]"
 }
 
+# Usage: deconz_rules_power_door room device power door
+function deconz_rules_power_door() {
+  local room="${1}"
+  local device="${2}"
+  local -i power=${3}
+  local -i door=${4}
+
+  deconz_rule "${room} ${device} Done" "[
+    $(deconz_condition_sensor ${power} power lt 3),
+    $(deconz_condition_ddx ${power} power "00:05:00")
+  ]" "[
+    $(deconz_action_sensor_state ${door} '{"open": true}')
+  ]"
+
+  deconz_rule "${room} ${device} Running" "[
+    $(deconz_condition_sensor ${power} power gt 2)
+  ]" "[
+    $(deconz_action_sensor_state ${door} '{"open": true}')
+  ]"
+}
+
 # ===== Door Sensors ===========================================================
 
 # Usage: deconz_rules_room room status door [noclose]
